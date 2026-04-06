@@ -164,11 +164,6 @@ graph LR
 | 23 | `test_get_by_id` | Отримання товару за ID |
 | 24 | `test_admin_remove_product` | Адмін видаляє товар з каталогу |
 
-### Запуск тестів
-
-```bash
-python shop_tests.py
-```
 
 ### Файли
 
