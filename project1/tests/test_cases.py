@@ -1,7 +1,5 @@
 """
-Юніт-тести для системи обліку замовлень магазину.
 Запуск: python -m pytest tests/test_cases.py -v
-або:    python tests/test_cases.py
 """
 import sys, os, unittest
 

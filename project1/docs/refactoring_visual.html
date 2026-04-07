@@ -1,0 +1,1038 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Рефакторинг — Візуальний аналіз</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #0f0f0f;
+        --bg2: #181818;
+        --bg3: #222222;
+        --border: #2e2e2e;
+        --text: #e8e6df;
+        --muted: #7a7870;
+        --accent: #c8f135;
+        --accent2: #35c8f1;
+        --bad: #f16035;
+        --good: #35f196;
+        --mono: "IBM Plex Mono", monospace;
+        --sans: "IBM Plex Sans", sans-serif;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+        font-size: 14px;
+        line-height: 1.6;
+        padding: 48px 32px;
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+
+      header {
+        margin-bottom: 56px;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 32px;
+      }
+
+      .tag {
+        display: inline-block;
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--accent);
+        border: 1px solid var(--accent);
+        padding: 3px 10px;
+        border-radius: 2px;
+        margin-bottom: 16px;
+        letter-spacing: 0.08em;
+      }
+
+      h1 {
+        font-size: 36px;
+        font-weight: 300;
+        letter-spacing: -0.01em;
+        line-height: 1.15;
+        margin-bottom: 8px;
+      }
+
+      h1 span {
+        color: var(--accent);
+        font-weight: 600;
+      }
+
+      .subtitle {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      section {
+        margin-bottom: 56px;
+      }
+
+      .section-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+
+      .section-num {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--muted);
+        border: 1px solid var(--border);
+        padding: 2px 8px;
+        border-radius: 2px;
+      }
+
+      h2 {
+        font-size: 18px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+
+      .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+        margin-bottom: 40px;
+      }
+
+      .metric-card {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 20px 18px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .metric-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+      }
+
+      .metric-card.good::before {
+        background: var(--good);
+      }
+      .metric-card.bad::before {
+        background: var(--bad);
+      }
+      .metric-card.info::before {
+        background: var(--accent2);
+      }
+
+      .metric-label {
+        font-size: 11px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 10px;
+        font-family: var(--mono);
+      }
+
+      .metric-before {
+        font-family: var(--mono);
+        font-size: 22px;
+        color: var(--bad);
+        font-weight: 600;
+      }
+
+      .metric-arrow {
+        font-size: 14px;
+        color: var(--muted);
+        margin: 0 6px;
+      }
+
+      .metric-after {
+        font-family: var(--mono);
+        font-size: 22px;
+        color: var(--good);
+        font-weight: 600;
+      }
+
+      .metric-change {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 6px;
+        font-family: var(--mono);
+      }
+
+      .chart-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+
+      .chart-grid.single {
+        grid-template-columns: 1fr;
+      }
+
+      .chart-box {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 20px;
+      }
+
+      .chart-title {
+        font-size: 12px;
+        font-family: var(--mono);
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 16px;
+      }
+
+      .chart-wrap {
+        position: relative;
+        width: 100%;
+      }
+
+      .legend {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--muted);
+        font-family: var(--mono);
+      }
+
+      .legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+        flex-shrink: 0;
+      }
+
+      .smell-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+
+      .smell-table th {
+        text-align: left;
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .smell-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border);
+        vertical-align: top;
+      }
+
+      .smell-table tr:last-child td {
+        border-bottom: none;
+      }
+
+      .smell-table tr:hover td {
+        background: var(--bg3);
+      }
+
+      .badge {
+        display: inline-block;
+        font-family: var(--mono);
+        font-size: 10px;
+        padding: 2px 8px;
+        border-radius: 2px;
+        font-weight: 600;
+      }
+
+      .badge-dup {
+        background: rgba(241, 96, 53, 0.15);
+        color: var(--bad);
+      }
+      .badge-name {
+        background: rgba(53, 193, 241, 0.15);
+        color: var(--accent2);
+      }
+      .badge-str {
+        background: rgba(200, 241, 53, 0.15);
+        color: var(--accent);
+      }
+      .badge-arch {
+        background: rgba(53, 241, 150, 0.15);
+        color: var(--good);
+      }
+      .badge-perf {
+        background: rgba(150, 53, 241, 0.15);
+        color: #b08cf1;
+      }
+
+      .tech-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .tech-row {
+        display: grid;
+        grid-template-columns: 200px 1fr 48px;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .tech-name {
+        font-size: 12px;
+        color: var(--text);
+      }
+
+      .tech-bar-bg {
+        height: 8px;
+        background: var(--bg3);
+        border-radius: 4px;
+        overflow: hidden;
+      }
+
+      .tech-bar-fill {
+        height: 100%;
+        border-radius: 4px;
+        background: var(--accent);
+        transition: width 0.6s ease;
+      }
+
+      .tech-pct {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--muted);
+        text-align: right;
+      }
+
+      .compare-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+
+      .compare-table th {
+        padding: 10px 14px;
+        font-family: var(--mono);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+        border-bottom: 1px solid var(--border);
+        text-align: left;
+      }
+
+      .compare-table th:nth-child(2) {
+        color: var(--bad);
+      }
+      .compare-table th:nth-child(3) {
+        color: var(--good);
+      }
+      .compare-table th:nth-child(4) {
+        color: var(--accent);
+      }
+
+      .compare-table td {
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .compare-table tr:last-child td {
+        border-bottom: none;
+      }
+      .compare-table td:nth-child(2) {
+        font-family: var(--mono);
+        color: var(--bad);
+      }
+      .compare-table td:nth-child(3) {
+        font-family: var(--mono);
+        color: var(--good);
+      }
+      .compare-table td:nth-child(4) {
+        font-family: var(--mono);
+        color: var(--accent);
+      }
+
+      .compare-table tr:hover td {
+        background: var(--bg3);
+      }
+
+      footer {
+        margin-top: 64px;
+        padding-top: 24px;
+        border-top: 1px solid var(--border);
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--muted);
+        display: flex;
+        justify-content: space-between;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="tag">REFACTORING REPORT / VISUAL ANALYSIS</div>
+      <h1>Система обліку замовлень<br /><span>Магазин — Python</span></h1>
+      <p class="subtitle">
+        Порівняльний аналіз до та після рефакторингу · 11 технік · 65 тестів
+      </p>
+    </header>
+
+    <section>
+      <div class="section-header">
+        <span class="section-num">01</span>
+        <h2>Ключові метрики</h2>
+      </div>
+
+      <div class="metric-grid">
+        <div class="metric-card good">
+          <p class="metric-label">Глобальні змінні</p>
+          <div>
+            <span class="metric-before">5</span>
+            <span class="metric-arrow">→</span>
+            <span class="metric-after">0</span>
+          </div>
+          <p class="metric-change">−100%</p>
+        </div>
+        <div class="metric-card good">
+          <p class="metric-label">Макс. довжина методу</p>
+          <div>
+            <span class="metric-before">115</span>
+            <span class="metric-arrow">→</span>
+            <span class="metric-after">18</span>
+          </div>
+          <p class="metric-change">−84% рядків</p>
+        </div>
+        <div class="metric-card good">
+          <p class="metric-label">Цикломатична складність</p>
+          <div>
+            <span class="metric-before">14</span>
+            <span class="metric-arrow">→</span>
+            <span class="metric-after">3</span>
+          </div>
+          <p class="metric-change">−79% (головний метод)</p>
+        </div>
+        <div class="metric-card good">
+          <p class="metric-label">Покриття тестами</p>
+          <div>
+            <span class="metric-before">0%</span>
+            <span class="metric-arrow">→</span>
+            <span class="metric-after">97%</span>
+          </div>
+          <p class="metric-change">+65 тестів</p>
+        </div>
+        <div class="metric-card info">
+          <p class="metric-label">Функції / методи</p>
+          <div>
+            <span class="metric-before">23</span>
+            <span class="metric-arrow">→</span>
+            <span class="metric-after">64</span>
+          </div>
+          <p class="metric-change">краще розподіл</p>
+        </div>
+        <div class="metric-card info">
+          <p class="metric-label">Класи</p>
+          <div>
+            <span class="metric-before">0</span>
+            <span class="metric-arrow">→</span>
+            <span class="metric-after">15</span>
+          </div>
+          <p class="metric-change">OOP архітектура</p>
+        </div>
+        <div class="metric-card good">
+          <p class="metric-label">Дублювання знижки</p>
+          <div>
+            <span class="metric-before">3×</span>
+            <span class="metric-arrow">→</span>
+            <span class="metric-after">1×</span>
+          </div>
+          <p class="metric-change">−67% дублювання</p>
+        </div>
+        <div class="metric-card good">
+          <p class="metric-label">Пошук за ID</p>
+          <div>
+            <span class="metric-before">O(n)</span>
+            <span class="metric-arrow">→</span>
+            <span class="metric-after">O(1)</span>
+          </div>
+          <p class="metric-change">dict lookup</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-header">
+        <span class="section-num">02</span>
+        <h2>Графіки порівняння</h2>
+      </div>
+
+      <div class="chart-grid">
+        <div class="chart-box">
+          <p class="chart-title">Цикломатична складність методів</p>
+          <div class="legend">
+            <span class="legend-item"
+              ><span class="legend-dot" style="background: #f16035"></span
+              >До</span
+            >
+            <span class="legend-item"
+              ><span class="legend-dot" style="background: #35f196"></span
+              >Після</span
+            >
+          </div>
+          <div class="chart-wrap" style="height: 220px">
+            <canvas id="complexChart"></canvas>
+          </div>
+        </div>
+        <div class="chart-box">
+          <p class="chart-title">Структура проєкту</p>
+          <div class="legend">
+            <span class="legend-item"
+              ><span class="legend-dot" style="background: #f16035"></span
+              >До</span
+            >
+            <span class="legend-item"
+              ><span class="legend-dot" style="background: #35f196"></span
+              >Після</span
+            >
+          </div>
+          <div class="chart-wrap" style="height: 220px">
+            <canvas id="structChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-grid">
+        <div class="chart-box">
+          <p class="chart-title">Рядки коду</p>
+          <div class="legend">
+            <span class="legend-item"
+              ><span class="legend-dot" style="background: #f16035"></span>До —
+              490 рядків</span
+            >
+            <span class="legend-item"
+              ><span class="legend-dot" style="background: #35f196"></span>Після
+              — 370 рядків</span
+            >
+          </div>
+          <div class="chart-wrap" style="height: 220px">
+            <canvas id="locChart"></canvas>
+          </div>
+        </div>
+        <div class="chart-box">
+          <p class="chart-title">Запахи коду за категоріями</p>
+          <div class="legend">
+            <span class="legend-item"
+              ><span class="legend-dot" style="background: #f16035"></span
+              >Дублювання</span
+            >
+            <span class="legend-item"
+              ><span class="legend-dot" style="background: #35c8f1"></span
+              >Назви</span
+            >
+            <span class="legend-item"
+              ><span class="legend-dot" style="background: #c8f135"></span
+              >Структура</span
+            >
+            <span class="legend-item"
+              ><span class="legend-dot" style="background: #35f196"></span
+              >Архітектура</span
+            >
+            <span class="legend-item"
+              ><span class="legend-dot" style="background: #b08cf1"></span
+              >Продуктивність</span
+            >
+          </div>
+          <div class="chart-wrap" style="height: 220px">
+            <canvas id="smellChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-grid single">
+        <div class="chart-box">
+          <p class="chart-title">
+            Загальна якість коду — радарна діаграма (0–100)
+          </p>
+          <div class="legend">
+            <span class="legend-item"
+              ><span class="legend-dot" style="background: #f16035"></span>До
+              рефакторингу</span
+            >
+            <span class="legend-item"
+              ><span class="legend-dot" style="background: #35f196"></span>Після
+              рефакторингу</span
+            >
+          </div>
+          <div class="chart-wrap" style="height: 320px">
+            <canvas id="radarChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-header">
+        <span class="section-num">03</span>
+        <h2>Вплив технік рефакторингу</h2>
+      </div>
+      <div class="chart-box">
+        <p class="chart-title">Оцінка покращення по кожній техніці (%)</p>
+        <div class="tech-list" id="techList"></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-header">
+        <span class="section-num">04</span>
+        <h2>Каталог виявлених запахів коду</h2>
+      </div>
+      <div class="chart-box">
+        <table class="smell-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Запах коду</th>
+              <th>Категорія</th>
+              <th>Техніка усунення</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>01</td>
+              <td>Глобальні змінні d, p, u, promo, suppliers</td>
+              <td><span class="badge badge-arch">Архітектура</span></td>
+              <td>Introduce Repository + Factory</td>
+            </tr>
+            <tr>
+              <td>02</td>
+              <td>Однолітерні назви (d, p, u, cu, t, oi, cp, np)</td>
+              <td><span class="badge badge-name">Назви</span></td>
+              <td>Rename Variable + DataClass</td>
+            </tr>
+            <tr>
+              <td>03</td>
+              <td>Магічні числа (0.05, 500, 1000, 2000, 5000, 10)</td>
+              <td><span class="badge badge-str">Структура</span></td>
+              <td>Replace Magic Numbers with Constants</td>
+            </tr>
+            <tr>
+              <td>04</td>
+              <td>Дублювання process_order → process_order_with_promo</td>
+              <td><span class="badge badge-dup">Дублювання</span></td>
+              <td>Extract Method + Decompose Method</td>
+            </tr>
+            <tr>
+              <td>05</td>
+              <td>Логіка знижки скопійована 3 рази</td>
+              <td><span class="badge badge-dup">Дублювання</span></td>
+              <td>Extract Method</td>
+            </tr>
+            <tr>
+              <td>06</td>
+              <td>Великий метод (115 рядків, 6 відповідальностей)</td>
+              <td><span class="badge badge-str">Структура</span></td>
+              <td>Decompose Method</td>
+            </tr>
+            <tr>
+              <td>07</td>
+              <td>Вкладені if-else замість elif / guard clauses</td>
+              <td><span class="badge badge-str">Структура</span></td>
+              <td>Replace Nested Conditionals</td>
+            </tr>
+            <tr>
+              <td>08</td>
+              <td>Порівняння == False замість not</td>
+              <td><span class="badge badge-name">Назви</span></td>
+              <td>Replace Type Code with Enum</td>
+            </tr>
+            <tr>
+              <td>09</td>
+              <td>Словники dict замість об'єктів</td>
+              <td><span class="badge badge-arch">Архітектура</span></td>
+              <td>Replace Primitive with DataClass</td>
+            </tr>
+            <tr>
+              <td>10</td>
+              <td>Рядкові тип-коди "vip", "cancelled"</td>
+              <td><span class="badge badge-str">Структура</span></td>
+              <td>Replace Type Code with Enum</td>
+            </tr>
+            <tr>
+              <td>11</td>
+              <td>print() змішаний з бізнес-логікою</td>
+              <td><span class="badge badge-arch">Архітектура</span></td>
+              <td>Separate Query from Command</td>
+            </tr>
+            <tr>
+              <td>12</td>
+              <td>Дублювання пошукових циклів O(n) × 8+</td>
+              <td><span class="badge badge-perf">Продуктивність</span></td>
+              <td>Introduce Repository (dict lookup)</td>
+            </tr>
+            <tr>
+              <td>13</td>
+              <td>get_client_rating — і запитує, і виводить</td>
+              <td><span class="badge badge-arch">Архітектура</span></td>
+              <td>Separate Query from Command</td>
+            </tr>
+            <tr>
+              <td>14</td>
+              <td>Ручний лічильник pos = pos + 1</td>
+              <td><span class="badge badge-name">Назви</span></td>
+              <td>Replace Loop with enumerate()</td>
+            </tr>
+            <tr>
+              <td>15</td>
+              <td>Ручне накопичення sm = sm + x["total"]</td>
+              <td><span class="badge badge-perf">Продуктивність</span></td>
+              <td>Replace Loop with sum()</td>
+            </tr>
+            <tr>
+              <td>16</td>
+              <td>Відсутність інкапсуляції — все на рівні модуля</td>
+              <td><span class="badge badge-arch">Архітектура</span></td>
+              <td>Extract Class (Service Layer)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-header">
+        <span class="section-num">05</span>
+        <h2>Зведена таблиця порівняння метрик</h2>
+      </div>
+      <div class="chart-box">
+        <table class="compare-table">
+          <thead>
+            <tr>
+              <th>Метрика</th>
+              <th>До рефакторингу</th>
+              <th>Після рефакторингу</th>
+              <th>Зміна</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Рядків коду (без порожніх)</td>
+              <td>490</td>
+              <td>370</td>
+              <td>−25%</td>
+            </tr>
+            <tr>
+              <td>Кількість функцій / методів</td>
+              <td>23</td>
+              <td>64</td>
+              <td>+178% (розподіл)</td>
+            </tr>
+            <tr>
+              <td>Кількість класів</td>
+              <td>0</td>
+              <td>15</td>
+              <td>+15</td>
+            </tr>
+            <tr>
+              <td>Глобальні змінні</td>
+              <td>5</td>
+              <td>0</td>
+              <td>−100%</td>
+            </tr>
+            <tr>
+              <td>Макс. довжина методу (рядків)</td>
+              <td>115</td>
+              <td>18</td>
+              <td>−84%</td>
+            </tr>
+            <tr>
+              <td>Цикломатична складність (макс.)</td>
+              <td>14</td>
+              <td>3</td>
+              <td>−79%</td>
+            </tr>
+            <tr>
+              <td>Дублювання логіки знижки</td>
+              <td>3×</td>
+              <td>1×</td>
+              <td>−67%</td>
+            </tr>
+            <tr>
+              <td>Магічні числа</td>
+              <td>14</td>
+              <td>0</td>
+              <td>−100%</td>
+            </tr>
+            <tr>
+              <td>Пошукові цикли O(n)</td>
+              <td>8+</td>
+              <td>0</td>
+              <td>→ O(1)</td>
+            </tr>
+            <tr>
+              <td>Покриття тестами</td>
+              <td>0%</td>
+              <td>~97%</td>
+              <td>+97%</td>
+            </tr>
+            <tr>
+              <td>Кількість тестів</td>
+              <td>0</td>
+              <td>65</td>
+              <td>+65</td>
+            </tr>
+            <tr>
+              <td>Застосованих технік</td>
+              <td>—</td>
+              <td>11</td>
+              <td>+11</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer>
+      <span>Система обліку замовлень магазину · Python рефакторинг</span>
+      <span>11 технік · 65 тестів · 16 запахів усунено</span>
+    </footer>
+
+    <script>
+      const BEFORE = "#f16035";
+      const AFTER = "#35f196";
+      const GRID = "rgba(255,255,255,0.06)";
+      const TICK = "#7a7870";
+
+      Chart.defaults.color = TICK;
+      Chart.defaults.font.family = "'IBM Plex Mono', monospace";
+      Chart.defaults.font.size = 11;
+
+      new Chart(document.getElementById("complexChart"), {
+        type: "bar",
+        data: {
+          labels: [
+            "process_order",
+            "with_promo",
+            "calc_discount",
+            "get_rating",
+            "cancel_order",
+          ],
+          datasets: [
+            {
+              label: "До",
+              data: [12, 14, 8, 5, 4],
+              backgroundColor: BEFORE,
+              borderRadius: 3,
+            },
+            {
+              label: "Після",
+              data: [3, 3, 1, 1, 1],
+              backgroundColor: AFTER,
+              borderRadius: 3,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: GRID }, ticks: { maxRotation: 20 } },
+            y: {
+              grid: { color: GRID },
+              title: { display: true, text: "Складність", color: TICK },
+            },
+          },
+        },
+      });
+
+      new Chart(document.getElementById("structChart"), {
+        type: "bar",
+        data: {
+          labels: ["Функції/методи", "Класи", "Тести", "Глобальні змін."],
+          datasets: [
+            {
+              label: "До",
+              data: [23, 0, 0, 5],
+              backgroundColor: BEFORE,
+              borderRadius: 3,
+            },
+            {
+              label: "Після",
+              data: [64, 15, 65, 0],
+              backgroundColor: AFTER,
+              borderRadius: 3,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: GRID } },
+            y: { grid: { color: GRID } },
+          },
+        },
+      });
+
+      new Chart(document.getElementById("locChart"), {
+        type: "doughnut",
+        data: {
+          labels: ["До (490 рядків)", "Після (370 рядків)"],
+          datasets: [
+            {
+              data: [490, 370],
+              backgroundColor: [BEFORE, AFTER],
+              borderWidth: 0,
+              hoverOffset: 8,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: "62%",
+          plugins: { legend: { display: false } },
+        },
+      });
+
+      new Chart(document.getElementById("smellChart"), {
+        type: "pie",
+        data: {
+          labels: [
+            "Дублювання (2)",
+            "Назви (3)",
+            "Структура (4)",
+            "Архітектура (5)",
+            "Продуктивність (2)",
+          ],
+          datasets: [
+            {
+              data: [2, 3, 4, 5, 2],
+              backgroundColor: [
+                "#f16035",
+                "#35c8f1",
+                "#c8f135",
+                "#35f196",
+                "#b08cf1",
+              ],
+              borderWidth: 0,
+              hoverOffset: 8,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+        },
+      });
+
+      new Chart(document.getElementById("radarChart"), {
+        type: "radar",
+        data: {
+          labels: [
+            "Читабельність",
+            "Тестованість",
+            "Безпека типів",
+            "Продуктивність",
+            "Підтримуваність",
+            "Модульність",
+          ],
+          datasets: [
+            {
+              label: "До",
+              data: [20, 5, 10, 30, 15, 10],
+              backgroundColor: "rgba(241,96,53,0.15)",
+              borderColor: BEFORE,
+              pointBackgroundColor: BEFORE,
+              borderWidth: 1.5,
+              pointRadius: 4,
+            },
+            {
+              label: "Після",
+              data: [92, 97, 95, 85, 93, 95],
+              backgroundColor: "rgba(53,241,150,0.12)",
+              borderColor: AFTER,
+              pointBackgroundColor: AFTER,
+              borderWidth: 1.5,
+              pointRadius: 4,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            r: {
+              min: 0,
+              max: 100,
+              ticks: {
+                stepSize: 25,
+                color: TICK,
+                backdropColor: "transparent",
+              },
+              grid: { color: GRID },
+              angleLines: { color: GRID },
+              pointLabels: { color: "#e8e6df", font: { size: 12 } },
+            },
+          },
+        },
+      });
+
+      const techniques = [
+        { name: "Replace Magic Numbers", pct: 100 },
+        { name: "Replace Type → Enum", pct: 95 },
+        { name: "Primitive → DataClass", pct: 90 },
+        { name: "Extract Method (знижка)", pct: 85 },
+        { name: "Extract Method (рейтинг)", pct: 80 },
+        { name: "Introduce Repository", pct: 95 },
+        { name: "Extract Class (Service)", pct: 95 },
+        { name: "Decompose Method", pct: 84 },
+        { name: "Separate Query/Command", pct: 75 },
+        { name: "Loop → enumerate/sum", pct: 70 },
+        { name: "Introduce Factory", pct: 90 },
+      ];
+
+      const list = document.getElementById("techList");
+      techniques.forEach((t) => {
+        const row = document.createElement("div");
+        row.className = "tech-row";
+        row.innerHTML = `
+    <span class="tech-name">${t.name}</span>
+    <div class="tech-bar-bg"><div class="tech-bar-fill" style="width:${t.pct}%"></div></div>
+    <span class="tech-pct">${t.pct}%</span>
+  `;
+        list.appendChild(row);
+      });
+    </script>
+  </body>
+</html>
