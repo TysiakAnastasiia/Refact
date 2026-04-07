@@ -437,3 +437,9 @@ def build_default_store() -> tuple[ProductRepository, CustomerRepository, ...]:
 ## 6. Візуалізація
 
 ![Ключові метрики](image.png)
+
+![Графіки порівняння](image-1.png)
+
+![Загальна якість коду](image-2.png)
+
+![Вплив технік рефакторингу](image-3.png)
