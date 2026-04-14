@@ -64,9 +64,6 @@ python -m pytest tests/unit/ -v
 python -m pytest tests/unit/ --cov=src --cov-report=term-missing
 ```
 
-Ось переклад розділу про відповідність вимогам Лабораторної роботи №4 (Compliance) для твого `README.md`. Я адаптував термінологію, щоб було зрозуміло, як класи твого проєкту відповідають базовим вимогам завдання.
-
-````markdown
 ### Структура класів (Menu, Dish, Order, Customer, KitchenNotifier)
 
 У проєкті реалізовано аналоги базових сутностей згідно з варіантом:
@@ -106,6 +103,7 @@ def test_create_daily_habit(facade):
     assert habit.title == "Медитація"
     assert habit.habit_type == "daily"
 ```
+
 ````
 
 **Створення замовлень (Виконання звички):**
@@ -140,3 +138,4 @@ def test_mark_habit_done_notifies_observers(facade):
 ```
 
 ```
+````
