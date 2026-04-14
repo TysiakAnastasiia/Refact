@@ -104,8 +104,6 @@ def test_create_daily_habit(facade):
     assert habit.habit_type == "daily"
 ```
 
-````
-
 **Створення замовлень (Виконання звички):**
 
 ```python
@@ -134,8 +132,3 @@ def test_mark_habit_done_notifies_observers(facade):
 4.  **Патерни**: Належним чином впроваджено Singleton, Factory, Observer.
 5.  **Документація**: Наявна UML-діаграма та звіти про тестування.
 6.  **Покриття**: Понад 10 тестів для кожної частини (загалом 45 при мінімумі 30).
-
-```
-
-```
-````
