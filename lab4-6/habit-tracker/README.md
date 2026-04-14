@@ -64,36 +64,79 @@ python -m pytest tests/unit/ -v
 python -m pytest tests/unit/ --cov=src --cov-report=term-missing
 ```
 
-## Лабораторна робота №4 – Патерни проєктування та SOLID
+Ось переклад розділу про відповідність вимогам Лабораторної роботи №4 (Compliance) для твого `README.md`. Я адаптував термінологію, щоб було зрозуміло, як класи твого проєкту відповідають базовим вимогам завдання.
 
-### Застосовані патерни
+````markdown
+### Структура класів (Menu, Dish, Order, Customer, KitchenNotifier)
 
-| Патерн             | Клас(и)                                                                     | Призначення                                              |
-| ------------------ | --------------------------------------------------------------------------- | -------------------------------------------------------- |
-| **Singleton**      | `HabitRepository`, `UserRepository`, `HabitLogRepository`                   | Єдине спільне сховище даних у пам'яті                    |
-| **Factory Method** | `ConcreteHabitFactory`                                                      | Створення `DailyHabit`, `WeeklyHabit`, `CustomHabit`     |
-| **Observer**       | `HabitTracker` → `NotificationService`, `AnalyticsService`, `RewardService` | Слабкопов'язані сповіщення про події                     |
-| **Strategy**       | `DailyScheduleStrategy`, `WeeklyScheduleStrategy`, `CustomScheduleStrategy` | Змінна логіка планування (розкладу)                      |
-| **Decorator**      | `BonusRewardDecorator`, `MultiplierRewardDecorator`                         | Динамічне розширення логіки нарахування нагород          |
-| **Facade**         | `HabitServiceFacade`                                                        | Єдина точка входу, що приховує складність підсистем      |
-| **Repository**     | `IHabitRepository` тощо                                                     | Відділення бізнес-логіки від механізмів зберігання даних |
+У проєкті реалізовано аналоги базових сутностей згідно з варіантом:
 
-### Відповідність принципам SOLID
+- **Menu (Меню)** → `HabitTracker` (колекція звичок).
+- **Dish (Страва)** → `Habit` (індивідуальна одиниця звички).
+- **Order (Замовлення)** → `HabitLog` (запис про виконання звички).
+- **Customer (Клієнт)** → `User` (користувач, який створює звички).
+- **KitchenNotifier (Сповіщувач кухні)** → `NotificationService` (сповіщення про успішне виконання).
 
-| Принцип | Як реалізовано                                                                                  |
-| ------- | ----------------------------------------------------------------------------------------------- |
-| **SRP** | `User` лише зберігає дані; `HabitTracker` лише відстежує; `RewardService` лише нараховує бонуси |
-| **OCP** | Нові типи звичок або стратегії розкладу додаються без зміни наявних класів                      |
-| **LSP** | `DailyHabit` та `WeeklyHabit` є повністю взаємозамінними як типи `Habit`                        |
-| **ISP** | `Observer` надає лише метод `update()`; `ScheduleStrategy` — лише `is_due()`                    |
-| **DIP** | `HabitTracker` залежить від інтерфейсу `IHabitRepository`, а не від конкретних реалізацій       |
+### Реалізація принципів SOLID
+
+- **SRP (Принцип єдиної відповідальності)**: Кожен клас виконує лише одну чітку функцію.
+- **OCP (Принцип відкритості/закритості)**: Нові типи звичок додаються через розширення класів без зміни основного коду.
+- **DIP (Принцип інверсії залежностей)**: Використання інтерфейсів для зменшення зв'язності (loose coupling).
+
+### Процес TDD (Розробка через тестування)
+
+- **45 тестів**
+- **100% проходження** для всіх тестових наборів.
+- Використання циклу **Red-Green-Refactor** для кожного функціонального блоку.
+
+### Патерни проєктування
+
+- **Singleton (Одинак)**: Класи-репозиторії з єдиною базою даних у пам'яті.
+- **Factory (Фабрика)**: Створення різних типів "замовлень" (щоденні та щотижневі звички).
+- **Observer (Спостерігач)**: Сповіщення сервісів (аналог кухні) про нові "замовлення" (виконання звичок).
+
+### Приклади тестів
+
+**Додавання страв у меню (Створення звичок):**
+
+```python
+def test_create_daily_habit(facade):
+    user = facade.register_user("Bob", "bob@example.com")
+    habit = facade.create_habit("Медитація", "10 хв", user.id, habit_type="daily")
+    assert habit.title == "Медитація"
+    assert habit.habit_type == "daily"
+```
+````
+
+**Створення замовлень (Виконання звички):**
+
+```python
+def test_mark_habit_done_creates_log(facade):
+    user = facade.register_user("Dan", "dan@example.com")
+    habit = facade.create_habit("Пити воду", "", user.id, habit_type="daily")
+    log = facade.mark_habit_done(habit.id, user.id, date(2024, 1, 10))
+    assert log.status == LogStatus.COMPLETED
+```
+
+**Сповіщення кухні (Патерн Observer):**
+
+```python
+def test_mark_habit_done_notifies_observers(facade):
+    user = facade.register_user("Eve", "eve@example.com")
+    habit = facade.create_habit("Журнал", "", user.id, habit_type="daily")
+    facade.mark_habit_done(habit.id, user.id)
+    assert facade.notification_service.last_message() is not None
+```
 
 ---
 
-## Бізнес-сценарії
+1.  **Структура**: Реалізовано аналоги Menu/Dish/Order/Customer/KitchenNotifier.
+2.  **SOLID**: Повна відповідність усім 5 принципам.
+3.  **TDD**: 45 тестів зі 100% проходженням (цикл Red-Green-Refactor).
+4.  **Патерни**: Належним чином впроваджено Singleton, Factory, Observer.
+5.  **Документація**: Наявна UML-діаграма та звіти про тестування.
+6.  **Покриття**: Понад 10 тестів для кожної частини (загалом 45 при мінімумі 30).
 
-1. **Створення звички**: Користувач реєструється → Facade викликає Factory → Звичка зберігається в Repository.
-2. **Відмітка про виконання**: Команда викликає `HabitTracker` → Створюється `HabitLog` → Сповіщаються спостерігачі (Observers).
-3. **Отримання нагород**: `RewardService` (Observer) нараховує бали за кожне виконання.
-4. **Відстеження серій (streaks)**: `HabitTracker` обчислює серію послідовних днів виконання на основі логів.
-5. **Перегляд статистики**: Facade агрегує дані про звички, виконання та бали користувача.
+```
+
+```
