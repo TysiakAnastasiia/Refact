@@ -25,7 +25,7 @@ def main():
     db = OrderDatabase()
     notifier = KitchenNotifier()
 
-    print(f"\n🛒 Замовлення від '{customer1.name}'...")
+    print(f"\n Замовлення від '{customer1.name}'...")
     factory = OrderFactoryProvider.get_factory("regular")
     dishes = menu.get_all_dishes()[:2]
     order1 = factory.create_order(customer1, dishes)
@@ -46,7 +46,7 @@ def main():
     print(f"\n Підсумок:")
     print(f"   Замовлень у БД:       {len(db)}")
     print(f"   Сповіщень на кухні:   {notifier.notification_count}")
-    print(f"   Singleton DB (same?): {OrderDatabase() is db}")
+    print(f"   Singleton DB : {OrderDatabase() is db}")
     print("\n" + "=" * 60)
 
 

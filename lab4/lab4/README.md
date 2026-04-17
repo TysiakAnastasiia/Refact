@@ -94,6 +94,56 @@
 
 Тести також включають повні сценарії роботи системи (end-to-end flow).
 
+## Журнал тестів
+
+### Тести створення об'єктів
+
+- test_create_dish — passed
+- test_create_menu — passed
+- test_create_customer — passed
+- test_create_order — passed
+
+### Тести роботи меню
+
+- test_add_dish_to_menu — passed
+- test_remove_dish_from_menu — passed
+- test_menu_contains_dish — passed
+
+### Тести замовлень
+
+- test_add_dish_to_order — passed
+- test_order_total_calculation — passed
+- test_order_customer_assignment — passed
+
+### Тести обробки помилок
+
+- test_add_invalid_dish — passed
+- test_empty_menu — passed
+- test_order_without_customer — passed
+
+### Тести шаблонів проектування
+
+#### Singleton
+
+- test_singleton_instance — passed
+- test_singleton_uniqueness — passed
+
+#### Factory
+
+- test_regular_order_creation — passed
+- test_bulk_order_creation — passed
+- test_factory_provider — passed
+
+#### Observer
+
+- test_kitchen_notification — passed
+- test_multiple_notifications — passed
+
+### Інтеграційні тести
+
+- test_full_order_flow — passed
+- test_end_to_end_scenario — passed
+
 ---
 
 ## UML-діаграма
@@ -125,6 +175,7 @@ tests/
 │ └── test_all.py # 49 модульних тестів
 docs/
 │ └── uml.png # UML-діаграма класів системи
+| ├── uml2.png # Відображає динамічну взаємодію між компонентами через рівень абстракції — OrderService
 
 ## Висновок
 
