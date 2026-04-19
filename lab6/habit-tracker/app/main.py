@@ -11,7 +11,9 @@ from app import models, schemas, crud
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    models.Base.metadata.create_all(bind=engine)
+    # Only create tables for production PostgreSQL, not for test SQLite
+    if "sqlite" not in str(engine.url):
+        models.Base.metadata.create_all(bind=engine)
     yield
 
 
