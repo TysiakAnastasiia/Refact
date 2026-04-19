@@ -46,6 +46,9 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r lab6/habit-tracker/requirements.txt -r lab6/habit-tracker/requirements-test.txt
+      - name: Set DATABASE_URL for tests
+        run: |
+          echo "DATABASE_URL=postgresql://habit_user:habit_pass@localhost:5432/habit_db" >> $GITHUB_ENV
       - name: Run tests with coverage
         run: pytest lab6/habit-tracker/tests/ -v --cov=lab6/habit-tracker/app --cov-report=xml --cov-report=term-missing
       - name: Upload coverage
