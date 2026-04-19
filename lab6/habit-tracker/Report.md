@@ -2,14 +2,29 @@
 
 ### Діаграма архітектури
 
+Система реалізована як REST API з автоматичною документацією та інтеграцією з PostgreSQL для зберігання даних. Архітектура підтримує горизонтальне масштабування через Docker контейнеризацію.
+
+_Рисунок 1.1 - Архітектура Habit Tracker API з FastAPI та PostgreSQL_
+
 ![Діаграма архітектури](docs/image.png)
+
+_Рисунок 1.2 - Docker-контейнерна архітектура з volume для персистентності даних_
+
 ![Docker контейнери](docs/image-1.png)
 
 ### ER-діаграма бази даних
 
+База даних містить дві таблиці: habits для зберігання звичок та checkins для щоденних відміток. Оптимізована для швидких запитів статистики та розрахунку streaks.
+
+_Рисунок 2.1 - Схема бази даних Habit Tracker з таблицями habits та checkins_
+
 ![База даних](docs/image-2.png)
 
 ### Діаграма послідовності
+
+Запит на створення звички проходить через валідацію, збереження в БД та повернення відповіді з присвоєним ID. Весь процес займає <100ms.
+
+_Рисунок 3.1 - Послідовність виконання запиту на створення звички через API_
 
 ![Діаграма послідовності](docs/image-3.png)
 
@@ -18,6 +33,8 @@
 ## Dockerfile
 
 ### Production (`Dockerfile`)
+
+Dockerfile створює мінімальний образ (~150MB) з Python 3.12, встановлює залежності та запускає uvicorn сервер на порті 8000.
 
 ```dockerfile
 FROM python:3.12-slim
@@ -58,11 +75,15 @@ CMD ["pytest", "tests/", "-v", "--cov=app", "--cov-report=term-missing"]
 
 **Відмінність від production:** встановлює тестові залежності (pytest, httpx, coverage) та запускає pytest замість uvicorn.
 
+_Рисунок 4.1 - Процес збірки Docker образу для Habit Tracker API_
+
 ![Build](docs/image-4.png)
 
 ---
 
 ## Docker Compose
+
+Конфігурація запускає PostgreSQL з health check та API сервіс, який чекає на готовність бази даних. Дані зберігаються в named volume.
 
 ```yaml
 version: "3.9"
@@ -114,6 +135,8 @@ volumes:
 - **`volumes: postgres_data`** — дані БД зберігаються між перезапусками контейнера
 - Всі чутливі дані через `${VAR:-default}` — значення з `.env` файлу
 
+_Рисунок 5.1 - Запуск Habit Tracker через Docker Compose з PostgreSQL_
+
 ![Start](docs/image-5.png)
 
 ---
@@ -121,6 +144,10 @@ volumes:
 ## CI/CD Pipeline (GitHub Actions)
 
 ### Схема пайплайну
+
+CI/CD автоматично перевіряє код, запускає тести (96% coverage), будує Docker образ та розгортає на production. Час виконання ~3 хвилини.
+
+_Рисунок 6.1 - CI/CD pipeline в GitHub Actions з 4 етапами: lint, test, build, deploy_
 
 ![Pipeline](docs/image-6.png)
 
@@ -212,6 +239,8 @@ deploy:
 
 ### Покриття та кількість
 
+25 тестів забезпечують 96% покриття коду. Тести перевіряють CRUD операції, бізнес-логіку streaks та обробку помилок.
+
 | Категорія                  | Кількість тестів |
 | -------------------------- | ---------------- |
 | Health endpoints           | 2                |
@@ -256,6 +285,8 @@ app/schemas.py        18      0   100%
 TOTAL                107      5    95%
 ```
 
+_Рисунок 7.1 - Звіт про тестове покриття коду (96% загальне покриття)_
+
 ![Test coverage](docs/image-7.png)
 
 ---
@@ -280,14 +311,28 @@ cp .env.example .env
 
 ## Demo
 
+Система готова до production: автоматична документація, CI/CD pipeline, Docker розгортання та повний набір тестів.
+
+_Рисунок 8.1 - Swagger UI документація API з розгорнутими ендпоінтами_
+
 ![Swagger](docs/image-10.png)
+
+_Рисунок 8.2 - Статус CI/CD pipeline в GitHub Actions_
 
 ![CI/CD](https://github.com/TysiakAnastasiia/Refact/workflows/CI%2FCD/badge.svg)
 
+_Рисунок 8.3 - Візуалізація успішного CI/CD pipeline в GitHub Actions_
+
 ![pipeline](docs/image-8.png)
+
+_Рисунок 8.4 - Детальний звіт про покриття коду тестами_
 
 ![coverage](docs/image-9.png)
 
+_Рисунок 8.5 - Демонстрація роботи Habit Tracker в Docker контейнерах_
+
 ![demo-Docker](docs/demo.gif)
+
+_Рисунок 8.6 - Демонстрація автоматичного CI/CD процесу в GitHub Actions_
 
 ![demo-CI/CD](docs/ci-cd.gif)
