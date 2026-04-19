@@ -1,6 +1,4 @@
 import os
-os.environ["DATABASE_URL"] = "sqlite:///./test.db"
-
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -10,6 +8,8 @@ from datetime import date, timedelta
 from app.main import app
 from app.database import get_db, Base
 from app import crud
+
+os.environ["DATABASE_URL"] = "sqlite:///./test.db"
 
 SQLALCHEMY_TEST_URL = "sqlite:///./test.db"
 engine = create_engine(SQLALCHEMY_TEST_URL, connect_args={"check_same_thread": False})
