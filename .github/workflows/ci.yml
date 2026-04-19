@@ -68,7 +68,7 @@ jobs:
       - name: Build image
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: lab6/habit-tracker
           push: false
           tags: habit-tracker:${{ github.sha }}
           cache-from: type=gha
