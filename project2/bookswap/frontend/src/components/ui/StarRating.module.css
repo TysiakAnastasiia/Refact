@@ -1,0 +1,13 @@
+.stars { display: flex; align-items: center; gap: 1px; }
+
+.star { line-height: 1; }
+
+.filled { color: var(--star-filled); }
+.empty  { color: var(--star-empty); }
+
+.interactive .star { cursor: pointer; transition: transform var(--transition-fast); }
+.interactive .star:hover { transform: scale(1.2); }
+
+.sm  .star { font-size: 0.85rem; }
+.md  .star { font-size: 1.1rem; }
+.lg  .star { font-size: 1.4rem; }

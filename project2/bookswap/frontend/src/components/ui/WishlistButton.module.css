@@ -1,0 +1,25 @@
+.btn {
+  width: 32px; height: 32px;
+  border-radius: var(--radius-full);
+  background: rgba(254,252,248,0.85);
+  border: 1px solid var(--border-light);
+  backdrop-filter: blur(4px);
+  font-size: 1rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-xs);
+}
+
+.btn:hover {
+  color: #c0392b;
+  border-color: #c0392b;
+  transform: scale(1.1);
+}
+
+.active {
+  color: #c0392b !important;
+  border-color: #e8c5c2 !important;
+  background: #fef0ef !important;
+}

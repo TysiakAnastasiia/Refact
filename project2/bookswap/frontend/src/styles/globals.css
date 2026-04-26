@@ -1,0 +1,197 @@
+/* 
+   BookSwap Design System
+   Palette: Warm white → cream → sand → tan → brown
+*/
+
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Lora:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500;600&display=swap");
+
+:root {
+  /*  Color Palette  */
+  --white: #fefcf8;
+  --cream-50: #faf6ee;
+  --cream-100: #f5edd9;
+  --cream-200: #edd9b4;
+  --sand-300: #d4b896;
+  --sand-400: #c4a47a;
+  --tan-500: #a8855a;
+  --tan-600: #8b6844;
+  --brown-700: #6b4e30;
+  --brown-800: #4e3520;
+  --brown-900: #2d1e0f;
+
+  /*  Semantic Colors  */
+  --bg-primary: var(--white);
+  --bg-secondary: var(--cream-50);
+  --bg-card: #fffdf7;
+  --bg-hover: var(--cream-100);
+  --bg-muted: var(--cream-200);
+
+  --text-primary: var(--brown-900);
+  --text-secondary: var(--brown-700);
+  --text-muted: var(--tan-500);
+  --text-inverse: var(--white);
+
+  --border-light: var(--cream-200);
+  --border-mid: var(--sand-300);
+  --border-strong: var(--tan-500);
+
+  --accent: var(--tan-600);
+  --accent-hover: var(--brown-700);
+  --accent-light: var(--cream-100);
+
+  --star-filled: #c4841a;
+  --star-empty: var(--cream-200);
+
+  --success: #5a7a4a;
+  --success-bg: #eef5ea;
+  --error: #8b3a2a;
+  --error-bg: #faecea;
+  --warning: #8b6000;
+  --warning-bg: #fff8e0;
+
+  /*  Typography  */
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-serif: "Lora", Georgia, serif;
+  --font-sans: "DM Sans", system-ui, sans-serif;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+
+  /*  Spacing  */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  /*  Radius ─ */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+
+  /*  Shadows  */
+  --shadow-xs: 0 1px 2px rgba(45, 30, 15, 0.06);
+  --shadow-sm: 0 2px 6px rgba(45, 30, 15, 0.08);
+  --shadow-md: 0 4px 16px rgba(45, 30, 15, 0.1);
+  --shadow-lg: 0 8px 32px rgba(45, 30, 15, 0.12);
+  --shadow-xl: 0 16px 48px rgba(45, 30, 15, 0.16);
+
+  /*  Transitions  */
+  --transition-fast: 150ms ease;
+  --transition-base: 250ms ease;
+  --transition-slow: 400ms ease;
+
+  /*  Z-Index  */
+  --z-base: 0;
+  --z-raised: 10;
+  --z-overlay: 100;
+  --z-modal: 200;
+  --z-toast: 300;
+  --z-nav: 400;
+}
+
+/*  Reset & Base ─ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-size: 16px;
+}
+
+body {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+/* Subtle paper texture overlay */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23noise)' opacity='0.025'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: var(--z-base);
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+a:hover {
+  color: var(--accent-hover);
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+
+/*  Utilities  */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--space-6);
+}
+
+/*  Scrollbar  */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--cream-100);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--sand-300);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--tan-500);
+}
