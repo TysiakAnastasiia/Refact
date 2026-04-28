@@ -13,6 +13,7 @@ from app.repositories import (
     UserRepository, ReviewRepository, ExchangeRepository,
     WishlistRepository, MessageRepository, FriendshipRepository,
 )
+from app.core.observer import event_manager, Event, EventType
 from app.schemas import (
     UserRegister, UserUpdate, BookCreate, BookUpdate,
     ReviewCreate, ReviewUpdate, ExchangeCreate, MessageCreate,
@@ -25,20 +26,47 @@ class AuthService:
     def __init__(self, db: AsyncSession):
         self.user_repo = UserRepository(db)
 
-    async def register(self, data: UserRegister) -> dict:
-        if await self.user_repo.get_by_email(data.email):
+    async def register(self, user_data: UserRegister) -> dict:
+        # Check if user already exists
+        existing_user = await self.user_repo.get_by_email(user_data.email)
+        if existing_user:
             raise HTTPException(status_code=400, detail="Email already registered")
-        if await self.user_repo.get_by_username(data.username):
+        
+        existing_username = await self.user_repo.get_by_username(user_data.username)
+        if existing_username:
             raise HTTPException(status_code=400, detail="Username already taken")
 
+        # Create new user
         user = User(
-            email=data.email,
-            username=data.username,
-            hashed_password=get_password_hash(data.password),
-            full_name=data.full_name,
+            email=user_data.email,
+            username=user_data.username,
+            full_name=user_data.full_name,
+            hashed_password=get_password_hash(user_data.password),
+            bio=user_data.bio,
+            city=user_data.city,
         )
-        user = await self.user_repo.create(user)
-        return self._make_tokens(user)
+        created_user = await self.user_repo.create(user)
+
+        # Emit user registration event
+        await event_manager.notify(Event(
+            EventType.USER_REGISTERED,
+            {
+                'user_id': created_user.id,
+                'username': created_user.username,
+                'email': created_user.email,
+                'full_name': created_user.full_name
+            }
+        ))
+
+        # Generate tokens
+        access_token = create_access_token(created_user.id)
+        refresh_token = create_refresh_token(created_user.id)
+
+        return {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "user": created_user,
+        }
 
     async def login(self, email: str, password: str) -> dict:
         user = await self.user_repo.get_by_email(email)
@@ -188,6 +216,20 @@ class ExchangeService:
             message=data.message,
         )
         created_exchange = await self.exchange_repo.create(exchange)
+        
+        # Emit exchange creation event
+        await event_manager.notify(Event(
+            EventType.EXCHANGE_CREATED,
+            {
+                'exchange_id': created_exchange.id,
+                'requester_id': created_exchange.requester_id,
+                'owner_id': created_exchange.owner_id,
+                'offered_book_id': created_exchange.offered_book_id,
+                'requested_book_id': created_exchange.requested_book_id,
+                'status': created_exchange.status.value
+            }
+        ))
+        
         # Load relationships for response schema
         return await self.exchange_repo.get_with_details(created_exchange.id)
 
@@ -199,6 +241,27 @@ class ExchangeService:
             raise HTTPException(status_code=403, detail="Not your exchange")
         exchange.status = new_status
         await self.exchange_repo.update(exchange)
+        
+        # Emit exchange status update event
+        event_type = None
+        if new_status == ExchangeStatus.accepted:
+            event_type = EventType.EXCHANGE_ACCEPTED
+        elif new_status == ExchangeStatus.completed:
+            event_type = EventType.EXCHANGE_COMPLETED
+        
+        if event_type:
+            await event_manager.notify(Event(
+                event_type,
+                {
+                    'exchange_id': exchange.id,
+                    'requester_id': exchange.requester_id,
+                    'owner_id': exchange.owner_id,
+                    'old_status': exchange.status.value,
+                    'new_status': new_status.value,
+                    'updated_by_user_id': user_id
+                }
+            ))
+        
         # Load relationships for response schema
         return await self.exchange_repo.get_with_details(exchange_id)
 
@@ -242,7 +305,21 @@ class ChatService:
         if sender_id not in (exchange.requester_id, exchange.owner_id):
             raise HTTPException(status_code=403, detail="Not participant of this exchange")
         msg = Message(exchange_id=exchange_id, sender_id=sender_id, content=data.content)
-        return await self.message_repo.create(msg)
+        created_message = await self.message_repo.create(msg)
+        
+        # Emit message sent event
+        await event_manager.notify(Event(
+            EventType.MESSAGE_SENT,
+            {
+                'message_id': created_message.id,
+                'exchange_id': exchange_id,
+                'sender_id': sender_id,
+                'content': data.content,
+                'created_at': created_message.created_at.isoformat()
+            }
+        ))
+        
+        return created_message
 
     async def get_messages(self, exchange_id: int, user_id: int):
         exchange = await self.exchange_repo.get(exchange_id)
@@ -269,7 +346,21 @@ class FriendshipService:
             raise HTTPException(status_code=400, detail="Cannot add yourself as friend")
         
         # Create friendship (automatically accepted for simplicity)
-        friendship = await self.friendship_repo.create_friendship(requester_id, addressee_id)
+        friendship = Friendship(requester_id=requester_id, addressee_id=addressee_id, status="accepted")
+        created_friendship = await self.friendship_repo.create(friendship)
+        
+        # Emit friend added event
+        await event_manager.notify(Event(
+            EventType.FRIEND_ADDED,
+            {
+                'friendship_id': created_friendship.id,
+                'requester_id': requester_id,
+                'addressee_id': addressee_id,
+                'status': created_friendship.status,
+                'created_at': created_friendship.created_at.isoformat()
+            }
+        ))
+        
         return {"status": "success", "message": "Friend added successfully"}
 
     async def get_user_friends(self, user_id: int) -> Sequence[User]:
