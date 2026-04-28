@@ -10,7 +10,7 @@ from app.core.dependencies import get_current_user
 from app.models import User, BookGenre, ExchangeStatus
 from app.services import (
     AuthService, UserService, BookService, ReviewService,
-    ExchangeService, WishlistService, ChatService,
+    ExchangeService, WishlistService, ChatService, FriendshipService,
 )
 from app.services.recommendations import RecommendationService
 from app.schemas import (
@@ -61,6 +61,27 @@ async def update_me(
     return await UserService(db).update_profile(current_user, data)
 
 
+@users_router.get("/search", response_model=list[UserPublic])
+async def search_users(
+    q: str = Query(..., min_length=1, description="Search query"),
+    db: AsyncSession = Depends(get_db),
+):
+    from sqlalchemy import or_, select
+    result = await db.execute(
+        select(User)
+        .where(
+            or_(
+                User.username.ilike(f"%{q}%"),
+                User.full_name.ilike(f"%{q}%"),
+                User.email.ilike(f"%{q}%"),
+            )
+        )
+        .limit(20)
+    )
+    users = result.scalars().all()
+    return users
+
+
 @users_router.get("/{user_id}", response_model=UserPublic)
 async def get_user(user_id: int, db: AsyncSession = Depends(get_db)):
     return await UserService(db).get_user(user_id)
@@ -81,12 +102,13 @@ async def list_books(
     q: Optional[str] = Query(None, description="Search by title or author"),
     genre: Optional[BookGenre] = None,
     available_only: bool = False,
+    owner_id: Optional[int] = Query(None, description="Filter by owner ID"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
 ):
     service = BookService(db)
-    books, total = await service.search_books(q, genre, available_only, page, page_size)
+    books, total = await service.search_books(q, genre, available_only, owner_id, page, page_size)
     pages = (total + page_size - 1) // page_size
     return {"items": books, "total": total, "page": page, "page_size": page_size, "pages": pages}
 
@@ -195,6 +217,16 @@ async def my_exchanges(
     return await ExchangeRepository(db).get_for_user(current_user.id)
 
 
+@exchanges_router.get("/between", response_model=list[ExchangeResponse])
+async def exchanges_between_users(
+    user1: int = Query(..., description="First user ID"),
+    user2: int = Query(..., description="Second user ID"),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.repositories import ExchangeRepository
+    return await ExchangeRepository(db).get_between_users(user1, user2)
+
+
 @exchanges_router.post("", response_model=ExchangeResponse, status_code=201)
 async def create_exchange(
     data: ExchangeCreate,
@@ -274,6 +306,28 @@ async def get_messages(
     db: AsyncSession = Depends(get_db),
 ):
     return await ChatService(db).get_messages(exchange_id, current_user.id)
+
+
+#  Friends 
+
+friends_router = APIRouter(prefix="/friends", tags=["Friends"])
+
+
+@friends_router.post("/{user_id}", status_code=201)
+async def add_friend(
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await FriendshipService(db).add_friend(current_user.id, user_id)
+
+
+@friends_router.get("", response_model=list[UserPublic])
+async def get_friends(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await FriendshipService(db).get_user_friends(current_user.id)
 
 
 @chat_router.post("/{exchange_id}", response_model=MessageResponse, status_code=201)

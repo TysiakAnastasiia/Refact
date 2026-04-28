@@ -11,7 +11,7 @@ from app.models import User, Book, Review, Exchange, WishlistItem, Message, Exch
 from app.repositories.book import BookRepository
 from app.repositories import (
     UserRepository, ReviewRepository, ExchangeRepository,
-    WishlistRepository, MessageRepository,
+    WishlistRepository, MessageRepository, FriendshipRepository,
 )
 from app.schemas import (
     UserRegister, UserUpdate, BookCreate, BookUpdate,
@@ -105,9 +105,9 @@ class BookService:
             raise HTTPException(status_code=403, detail="Not your book")
         await self.book_repo.delete(book)
 
-    async def search_books(self, query=None, genre=None, available_only=False, page=1, page_size=20):
+    async def search_books(self, query=None, genre=None, available_only=False, owner_id=None, page=1, page_size=20):
         skip = (page - 1) * page_size
-        books, total = await self.book_repo.search(query, genre, available_only, skip, page_size)
+        books, total = await self.book_repo.search(query, genre, available_only, owner_id, skip, page_size)
 
         # Enrich with ratings
         enriched = []
@@ -174,16 +174,22 @@ class ExchangeService:
         if requested_book.owner_id == requester_id:
             raise HTTPException(status_code=400, detail="Cannot request your own book")
 
-        offered_book = await self.book_repo.get(data.offered_book_id)
-        if not offered_book or offered_book.owner_id != requester_id:
-            raise HTTPException(status_code=403, detail="Offered book must be yours")
+        # Перевіряємо пропоновану книгу, якщо вона вказана
+        if data.offered_book_id:
+            offered_book = await self.book_repo.get(data.offered_book_id)
+            if not offered_book or offered_book.owner_id != requester_id:
+                raise HTTPException(status_code=403, detail="Offered book must be yours")
 
         exchange = Exchange(
             requester_id=requester_id,
             owner_id=requested_book.owner_id,
-            **data.model_dump(),
+            offered_book_id=data.offered_book_id,
+            requested_book_id=data.requested_book_id,
+            message=data.message,
         )
-        return await self.exchange_repo.create(exchange)
+        created_exchange = await self.exchange_repo.create(exchange)
+        # Load relationships for response schema
+        return await self.exchange_repo.get_with_details(created_exchange.id)
 
     async def update_status(self, exchange_id: int, new_status: ExchangeStatus, user_id: int) -> Exchange:
         exchange = await self.exchange_repo.get(exchange_id)
@@ -192,7 +198,9 @@ class ExchangeService:
         if exchange.owner_id != user_id and exchange.requester_id != user_id:
             raise HTTPException(status_code=403, detail="Not your exchange")
         exchange.status = new_status
-        return await self.exchange_repo.update(exchange)
+        await self.exchange_repo.update(exchange)
+        # Load relationships for response schema
+        return await self.exchange_repo.get_with_details(exchange_id)
 
 
 # ─── Wishlist Service ─────────────────────────────────────────────────────────
@@ -243,3 +251,26 @@ class ChatService:
         if user_id not in (exchange.requester_id, exchange.owner_id):
             raise HTTPException(status_code=403, detail="Access denied")
         return await self.message_repo.get_exchange_messages(exchange_id)
+
+
+# ─── Friendship Service ─────────────────────────────────────────────────────────
+
+class FriendshipService:
+    def __init__(self, db: AsyncSession):
+        self.friendship_repo = FriendshipRepository(db)
+
+    async def add_friend(self, requester_id: int, addressee_id: int) -> dict:
+        # Check if already friends
+        existing = await self.friendship_repo.get_friendship(requester_id, addressee_id)
+        if existing:
+            raise HTTPException(status_code=400, detail="Already friends or request pending")
+        
+        if requester_id == addressee_id:
+            raise HTTPException(status_code=400, detail="Cannot add yourself as friend")
+        
+        # Create friendship (automatically accepted for simplicity)
+        friendship = await self.friendship_repo.create_friendship(requester_id, addressee_id)
+        return {"status": "success", "message": "Friend added successfully"}
+
+    async def get_user_friends(self, user_id: int) -> Sequence[User]:
+        return await self.friendship_repo.get_user_friends(user_id)

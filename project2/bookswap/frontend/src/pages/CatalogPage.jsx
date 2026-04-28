@@ -1,9 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw, Search } from "lucide-react";
 import { useState } from "react";
-import { booksApi } from "../api/client";
+import { booksApi, exchangesApi } from "../api/client";
 import AddBookModal from "../components/books/AddBookModal";
 import BookCard from "../components/books/BookCard";
+import ExchangeModal from "../components/exchanges/ExchangeModal";
 import useAuthStore from "../store/authStore";
 import styles from "./CatalogPage.module.css";
 
@@ -25,12 +26,72 @@ const GENRES = [
 
 export default function CatalogPage() {
   const { user } = useAuthStore();
+  const queryClient = useQueryClient();
+
   const [search, setSearch] = useState("");
   const [genre, setGenre] = useState("");
   const [availableOnly, setAvailableOnly] = useState(false);
   const [page, setPage] = useState(1);
   const [showAddBook, setShowAddBook] = useState(false);
+  const [showExchangeModal, setShowExchangeModal] = useState(false);
+  const [selectedBookForExchange, setSelectedBookForExchange] = useState(null);
   const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // Отримуємо книги користувача для пропозиції обміну
+  const { data: userBooks = [] } = useQuery({
+    queryKey: ["user-books", user?.id],
+    queryFn: () => booksApi.list({ owner_id: user.id }).then((r) => r.data),
+    enabled: !!user,
+  });
+
+  const createExchange = useMutation({
+    mutationFn: (requestedBookId) => {
+      const firstUserBook = userBooks[0];
+      if (!firstUserBook) {
+        throw new Error("У вас немає книг для обміну");
+      }
+      return exchangesApi.create({
+        offered_book_id: firstUserBook.id,
+        requested_book_id: requestedBookId,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["exchanges"]);
+      alert("✅ Пропозицію обміну надіслано!");
+    },
+    onError: (e) => {
+      console.error("Error creating exchange:", e);
+      alert(
+        "❌ Помилка: " +
+          (e.response?.data?.detail || e.message || "Спробуйте ще раз")
+      );
+    },
+  });
+
+  const handleExchangeRequest = (book) => {
+    console.log("handleExchangeRequest called with book:", book);
+    console.log("Current user:", user);
+
+    if (!user) {
+      console.log("No user - showing alert");
+      alert("Будь ласка, увійдіть в систему");
+      return;
+    }
+    if (book.owner_id === user.id) {
+      console.log("User owns the book - showing alert");
+      alert("Ви не можете обмінятися власною книгою");
+      return;
+    }
+
+    console.log("Setting selected book and showing modal");
+    setSelectedBookForExchange(book);
+    setShowExchangeModal(true);
+
+    console.log("Modal state after setting:", {
+      selectedBookForExchange: book,
+      showExchangeModal: true,
+    });
+  };
 
   // Debounce search
   const handleSearchChange = (val) => {
@@ -145,9 +206,21 @@ export default function CatalogPage() {
           </div>
         ) : (
           <div className={styles.grid}>
-            {data?.items?.map((book) => (
-              <BookCard key={book.id} book={book} />
-            ))}
+            {data?.items?.map((book) => {
+              console.log(
+                "Rendering BookCard for:",
+                book.title,
+                "with handleExchangeRequest:",
+                !!handleExchangeRequest
+              );
+              return (
+                <BookCard
+                  key={book.id}
+                  book={book}
+                  onExchangeRequest={handleExchangeRequest}
+                />
+              );
+            })}
           </div>
         )}
 
@@ -176,6 +249,15 @@ export default function CatalogPage() {
       </div>
 
       {showAddBook && <AddBookModal onClose={() => setShowAddBook(false)} />}
+      {showExchangeModal && selectedBookForExchange && (
+        <ExchangeModal
+          requestedBook={selectedBookForExchange}
+          onClose={() => {
+            setShowExchangeModal(false);
+            setSelectedBookForExchange(null);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -149,7 +149,7 @@ class ReviewResponse(BaseModel):
 #  Exchange 
 
 class ExchangeCreate(BaseModel):
-    offered_book_id: int
+    offered_book_id: Optional[int] = None
     requested_book_id: int
     message: Optional[str] = Field(None, max_length=500)
 
@@ -160,7 +160,7 @@ class ExchangeResponse(BaseModel):
     message: Optional[str]
     requester: UserPublic
     owner: UserPublic
-    offered_book: BookResponse
+    offered_book: Optional[BookResponse] = None
     requested_book: BookResponse
     created_at: datetime
     updated_at: Optional[datetime]

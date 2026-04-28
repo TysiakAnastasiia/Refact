@@ -1,18 +1,39 @@
-// ═══════════════════════════════════════════════
+//
 // HomePage.jsx
-// ═══════════════════════════════════════════════
+//
 import { useQuery } from "@tanstack/react-query";
 import { Book } from "lucide-react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { booksApi } from "../api/client";
 import BookCard from "../components/books/BookCard";
+import ExchangeModal from "../components/exchanges/ExchangeModal";
+import useAuthStore from "../store/authStore";
 import styles from "./HomePage.module.css";
 
 export default function HomePage() {
+  const { user } = useAuthStore();
+  const [showExchangeModal, setShowExchangeModal] = useState(false);
+  const [selectedBookForExchange, setSelectedBookForExchange] = useState(null);
+
   const { data } = useQuery({
     queryKey: ["books", "recent"],
     queryFn: () => booksApi.list({ page: 1, page_size: 6 }).then((r) => r.data),
   });
+
+  const handleExchangeRequest = (book) => {
+    console.log("HomePage handleExchangeRequest called with book:", book);
+    if (!user) {
+      alert("Будь ласка, увійдіть в систему");
+      return;
+    }
+    if (book.owner_id === user.id) {
+      alert("Ви не можете обмінятися власною книгою");
+      return;
+    }
+    setSelectedBookForExchange(book);
+    setShowExchangeModal(true);
+  };
 
   const { data: exchangeData } = useQuery({
     queryKey: ["books", "exchange"],
@@ -48,7 +69,11 @@ export default function HomePage() {
         </div>
         <div className={styles.heroDecor}>
           <div className={styles.heroBook}>
-            <Book className={styles.heroBookIcon} />
+            <img
+              src="/src/styles/img.jpg"
+              alt="Book decoration"
+              className={styles.heroBookImage}
+            />
           </div>
         </div>
       </section>
@@ -81,7 +106,11 @@ export default function HomePage() {
         </div>
         <div className={styles.booksGrid}>
           {data?.items?.map((book) => (
-            <BookCard key={book.id} book={book} />
+            <BookCard
+              key={book.id}
+              book={book}
+              onExchangeRequest={handleExchangeRequest}
+            />
           ))}
         </div>
       </section>
@@ -98,6 +127,16 @@ export default function HomePage() {
           </Link>
         </div>
       </section>
+
+      {showExchangeModal && selectedBookForExchange && (
+        <ExchangeModal
+          requestedBook={selectedBookForExchange}
+          onClose={() => {
+            setShowExchangeModal(false);
+            setSelectedBookForExchange(null);
+          }}
+        />
+      )}
     </div>
   );
 }

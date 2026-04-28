@@ -56,6 +56,14 @@ export default function Layout() {
                 >
                   ✨ Для мене
                 </NavLink>
+                <NavLink
+                  to="/users"
+                  className={({ isActive }) =>
+                    `${styles.link} ${isActive ? styles.active : ""}`
+                  }
+                >
+                  👥 Користувачі
+                </NavLink>
               </>
             )}
           </div>

@@ -46,7 +46,9 @@
   background: linear-gradient(135deg, var(--cream-100), var(--cream-200));
 }
 
-.coverIcon { font-size: 2.5rem; }
+.coverIcon {
+  font-size: 2.5rem;
+}
 
 .coverTitle {
   font-family: var(--font-serif);
@@ -67,14 +69,16 @@
   transition: opacity var(--transition-base);
 }
 
-.card:hover .coverOverlay { opacity: 1; }
+.card:hover .coverOverlay {
+  opacity: 1;
+}
 
 .viewBtn {
   color: var(--white);
   font-size: var(--text-sm);
   font-weight: 600;
   padding: var(--space-2) var(--space-5);
-  border: 2px solid rgba(255,255,255,0.8);
+  border: 2px solid rgba(255, 255, 255, 0.8);
   border-radius: var(--radius-full);
   letter-spacing: 0.04em;
 }
@@ -97,6 +101,38 @@
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-full);
   backdrop-filter: blur(4px);
+}
+
+.exchangeBtn {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  background: var(--accent);
+  color: var(--white);
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  border-radius: var(--radius-full);
+  font-size: 0.7rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  z-index: 1;
+}
+
+.exchangeBtn:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.exchangeBtnIcon {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
 }
 
 .info {
@@ -166,4 +202,43 @@
 .owner {
   font-size: var(--text-xs);
   color: var(--text-muted);
+}
+
+.ownerActions {
+  display: flex;
+  gap: var(--space-1);
+  margin-left: auto;
+}
+
+.editBtn,
+.deleteBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.editBtn {
+  background: var(--cream-100);
+  color: var(--text-secondary);
+}
+
+.editBtn:hover {
+  background: var(--accent);
+  color: var(--text-inverse);
+}
+
+.deleteBtn {
+  background: var(--error-bg);
+  color: var(--error);
+}
+
+.deleteBtn:hover {
+  background: var(--error);
+  color: var(--text-inverse);
 }

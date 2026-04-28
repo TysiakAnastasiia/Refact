@@ -55,6 +55,10 @@ export const reviewsApi = {
 export const exchangesApi = {
   list: (params) => api.get("/exchanges", { params }),
   myExchanges: () => api.get("/exchanges/my"),
+  getBetweenUsers: (userId1, userId2) =>
+    api.get("/exchanges/between", {
+      params: { user1: userId1, user2: userId2 },
+    }),
   create: (data) => api.post("/exchanges", data),
   accept: (id) => api.patch(`/exchanges/${id}/accept`),
   reject: (id) => api.patch(`/exchanges/${id}/reject`),
@@ -77,9 +81,15 @@ export const usersApi = {
   updateMe: (data) => api.patch("/users/me", data),
   getUser: (id) => api.get(`/users/${id}`),
   getUserReviews: (id) => api.get(`/users/${id}/reviews`),
+  search: (query) => api.get("/users/search", { params: { q: query } }),
 };
 
 export const recommendationsApi = {
   get: (genres) =>
     api.get("/recommendations", { params: { genres: genres?.join(",") } }),
+};
+
+export const friendsApi = {
+  add: (userId) => api.post(`/friends/${userId}`),
+  get: () => api.get("/friends"),
 };

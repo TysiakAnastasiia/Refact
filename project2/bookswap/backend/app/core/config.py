@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
 
     # CORS
-    allowed_origins: str = "http://localhost:5173,http://localhost:3000"
+    allowed_origins: str = "*" if app_env == "development" else "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000"
 
     @property
     def allowed_origins_list(self) -> list[str]:

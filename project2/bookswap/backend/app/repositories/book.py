@@ -24,6 +24,7 @@ class BookRepository(BaseRepository[Book]):
         query: Optional[str] = None,
         genre: Optional[BookGenre] = None,
         available_only: bool = False,
+        owner_id: Optional[int] = None,
         skip: int = 0,
         limit: int = 20,
     ) -> tuple[Sequence[Book], int]:
@@ -40,6 +41,8 @@ class BookRepository(BaseRepository[Book]):
             filters.append(Book.genre == genre)
         if available_only:
             filters.append(Book.is_available_for_exchange == True)
+        if owner_id:
+            filters.append(Book.owner_id == owner_id)
 
         base_q = select(Book).options(selectinload(Book.owner))
         if filters:

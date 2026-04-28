@@ -3,7 +3,7 @@ from sqlalchemy import select, and_
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import User, Review, Exchange, WishlistItem, Message, ExchangeStatus, Book
+from app.models import User, Review, Exchange, WishlistItem, Message, ExchangeStatus, Book, Friendship
 from app.repositories.base import BaseRepository
 
 
@@ -102,6 +102,23 @@ class ExchangeRepository(BaseRepository[Exchange]):
         )
         return result.scalars().all()
 
+    async def get_between_users(self, user1_id: int, user2_id: int) -> Sequence[Exchange]:
+        result = await self.db.execute(
+            select(Exchange)
+            .options(
+                selectinload(Exchange.requester),
+                selectinload(Exchange.owner),
+                selectinload(Exchange.offered_book).selectinload(Book.owner),
+                selectinload(Exchange.requested_book).selectinload(Book.owner),
+            )
+            .where(
+                (Exchange.requester_id == user1_id) & (Exchange.owner_id == user2_id) |
+                (Exchange.requester_id == user2_id) & (Exchange.owner_id == user1_id)
+            )
+            .order_by(Exchange.created_at.desc())
+        )
+        return result.scalars().all()
+
 
 class WishlistRepository(BaseRepository[WishlistItem]):
     def __init__(self, db: AsyncSession):
@@ -137,5 +154,37 @@ class MessageRepository(BaseRepository[Message]):
             .options(selectinload(Message.sender))
             .where(Message.exchange_id == exchange_id)
             .order_by(Message.created_at.asc())
+        )
+        return result.scalars().all()
+
+
+class FriendshipRepository(BaseRepository[Friendship]):
+    def __init__(self, db: AsyncSession):
+        super().__init__(Friendship, db)
+
+    async def get_friendship(self, user1_id: int, user2_id: int) -> Optional[Friendship]:
+        result = await self.db.execute(
+            select(Friendship).where(
+                (Friendship.requester_id == user1_id) & (Friendship.addressee_id == user2_id) |
+                (Friendship.requester_id == user2_id) & (Friendship.addressee_id == user1_id)
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def create_friendship(self, requester_id: int, addressee_id: int) -> Friendship:
+        friendship = Friendship(requester_id=requester_id, addressee_id=addressee_id, status="accepted")
+        return await self.create(friendship)
+
+    async def get_user_friends(self, user_id: int) -> Sequence[User]:
+        result = await self.db.execute(
+            select(User)
+            .join(Friendship, (
+                (Friendship.requester_id == user_id) & (Friendship.status == "accepted") |
+                (Friendship.addressee_id == user_id) & (Friendship.status == "accepted")
+            ))
+            .where(
+                (User.id == Friendship.addressee_id) | (User.id == Friendship.requester_id)
+            )
+            .where(User.id != user_id)
         )
         return result.scalars().all()

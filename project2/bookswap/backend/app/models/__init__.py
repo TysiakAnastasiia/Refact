@@ -161,3 +161,19 @@ class Message(Base):
 
     exchange: Mapped["Exchange"] = relationship("Exchange", back_populates="messages")
     sender: Mapped["User"] = relationship("User", back_populates="sent_messages")
+
+
+#  Friendship 
+
+class Friendship(Base):
+    __tablename__ = "friendships"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    requester_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    addressee_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending, accepted, rejected
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, onupdate=func.now())
+
+    requester: Mapped["User"] = relationship("User", foreign_keys=[requester_id])
+    addressee: Mapped["User"] = relationship("User", foreign_keys=[addressee_id])

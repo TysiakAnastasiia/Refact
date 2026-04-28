@@ -9,7 +9,7 @@ from app.core.config import settings
 from app.core.security import decode_token
 from app.api.routes import (
     auth_router, users_router, books_router, reviews_router,
-    exchanges_router, wishlist_router, chat_router, recs_router,
+    exchanges_router, wishlist_router, chat_router, recs_router, friends_router,
 )
 
 
@@ -63,12 +63,13 @@ app = FastAPI(
 )
 
 # CORS
+# Тимчасово дозволяємо всі origins для вирішення проблеми
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.allowed_origins,
+    allow_origins=["*"],              # Дозволяє запити з будь-яких адрес
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],              # Дозволяє всі методи (GET, POST, PUT, DELETE тощо)
+    allow_headers=["*"],              # Дозволяє всі заголовки
 )
 
 # Routers
@@ -80,6 +81,7 @@ app.include_router(exchanges_router, prefix="/api")
 app.include_router(wishlist_router, prefix="/api")
 app.include_router(chat_router, prefix="/api")
 app.include_router(recs_router, prefix="/api")
+app.include_router(friends_router, prefix="/api")
 
 
 #  WebSocket endpoint 

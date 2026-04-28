@@ -1,6 +1,6 @@
 // ─── ExchangePage.jsx ──────────────────────────────────────────────────────
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Book, RefreshCw } from "lucide-react";
+import { Book, MessageCircle, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { exchangesApi } from "../api/client";
 import ChatWindow from "../components/chat/ChatWindow";
