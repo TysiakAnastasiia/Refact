@@ -132,7 +132,7 @@ jobs:
       - name: Run integration tests
         working-directory: backend
         env:
-          DATABASE_URL: sqlite+aiosqlite:///:memory:
+          DATABASE_URL: "sqlite+aiosqlite:///:memory:"
           SECRET_KEY: test-secret-key
         run: pytest tests/integration/ -v
 
