@@ -1,268 +1,2320 @@
-openapi: 3.0.3
-info:
-  title: BookSwap API
-  description: |
-    REST API для платформи обміну книгами BookSwap.
-
-    ## Автентифікація
-    Використовується JWT Bearer token. Отримайте токен через `/api/auth/login`
-    і передавайте його у заголовку: `Authorization: Bearer <token>`
-
-    ## Ролі
-    - **Анонім** — перегляд каталогу, книг, рецензій
-    - **Авторизований користувач** — всі дії з книгами, обмін, чат, wishlist, рекомендації
-  version: 1.0.0
-  contact:
-    name: BookSwap Team
-
-servers:
-  - url: http://localhost:8000/api
-    description: Development
-
-components:
-  securitySchemes:
-    BearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-
-  schemas:
-    TokenResponse:
-      type: object
-      properties:
-        access_token: { type: string }
-        refresh_token: { type: string }
-        token_type: { type: string, example: bearer }
-
-    BookGenre:
-      type: string
-      enum: [fiction, non_fiction, fantasy, sci_fi, mystery, romance, thriller, horror, biography, history, science, self_help, children, poetry, other]
-
-    BookCondition:
-      type: string
-      enum: [new, good, fair, poor]
-
-    ExchangeStatus:
-      type: string
-      enum: [pending, accepted, completed, rejected, cancelled]
-
-paths:
-  /auth/register:
-    post:
-      tags: [Auth]
-      summary: Реєстрація нового користувача
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [email, username, password]
-              properties:
-                email: { type: string, format: email }
-                username: { type: string, minLength: 3 }
-                password: { type: string, minLength: 8 }
-                full_name: { type: string }
-      responses:
-        '201': { description: Успішна реєстрація, content: { application/json: { schema: { $ref: '#/components/schemas/TokenResponse' } } } }
-        '400': { description: Email або username вже зайняті }
-
-  /auth/login:
-    post:
-      tags: [Auth]
-      summary: Вхід в систему
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [email, password]
-              properties:
-                email: { type: string, format: email }
-                password: { type: string }
-      responses:
-        '200': { description: JWT токени }
-        '401': { description: Невірні облікові дані }
-
-  /books:
-    get:
-      tags: [Books]
-      summary: Список книг з пошуком та фільтрацією
-      parameters:
-        - { name: q, in: query, schema: { type: string }, description: Пошук по назві/автору }
-        - { name: genre, in: query, schema: { $ref: '#/components/schemas/BookGenre' } }
-        - { name: available_only, in: query, schema: { type: boolean } }
-        - { name: page, in: query, schema: { type: integer, default: 1 } }
-        - { name: page_size, in: query, schema: { type: integer, default: 20 } }
-      responses:
-        '200': { description: Список книг з пагінацією }
-    post:
-      tags: [Books]
-      summary: Додати книгу
-      security: [{ BearerAuth: [] }]
-      responses:
-        '201': { description: Книга створена }
-        '401': { description: Не авторизовано }
-
-  /books/{book_id}:
-    get:
-      tags: [Books]
-      summary: Деталі книги
-      parameters:
-        - { name: book_id, in: path, required: true, schema: { type: integer } }
-      responses:
-        '200': { description: Деталі книги з рейтингом }
-        '404': { description: Книгу не знайдено }
-
-  /books/{book_id}/reviews:
-    get:
-      tags: [Books]
-      summary: Рецензії до книги
-      parameters:
-        - { name: book_id, in: path, required: true, schema: { type: integer } }
-      responses:
-        '200': { description: Список рецензій }
-
-  /reviews:
-    post:
-      tags: [Reviews]
-      summary: Написати рецензію
-      security: [{ BearerAuth: [] }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [book_id, rating]
-              properties:
-                book_id: { type: integer }
-                rating: { type: integer, minimum: 1, maximum: 5 }
-                content: { type: string, maxLength: 2000 }
-      responses:
-        '201': { description: Рецензія створена }
-        '400': { description: Вже є рецензія до цієї книги }
-
-  /exchanges:
-    get:
-      tags: [Exchanges]
-      summary: Список активних пропозицій обміну
-      responses:
-        '200': { description: Список обмінів }
-    post:
-      tags: [Exchanges]
-      summary: Запропонувати обмін
-      security: [{ BearerAuth: [] }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [offered_book_id, requested_book_id]
-              properties:
-                offered_book_id: { type: integer }
-                requested_book_id: { type: integer }
-                message: { type: string, maxLength: 500 }
-      responses:
-        '201': { description: Обмін створено }
-        '400': { description: Книга недоступна або ваша власна }
-
-  /exchanges/{exchange_id}/accept:
-    patch:
-      tags: [Exchanges]
-      summary: Прийняти обмін (власник книги)
-      security: [{ BearerAuth: [] }]
-      parameters:
-        - { name: exchange_id, in: path, required: true, schema: { type: integer } }
-      responses:
-        '200': { description: Обмін прийнято }
-        '403': { description: Не ваш обмін }
-
-  /wishlist:
-    get:
-      tags: [Wishlist]
-      summary: Мій список бажань
-      security: [{ BearerAuth: [] }]
-      responses:
-        '200': { description: Список книг у wishlist }
-
-  /wishlist/{book_id}:
-    post:
-      tags: [Wishlist]
-      summary: Додати книгу до wishlist
-      security: [{ BearerAuth: [] }]
-      parameters:
-        - { name: book_id, in: path, required: true, schema: { type: integer } }
-      responses:
-        '201': { description: Додано до wishlist }
-        '400': { description: Вже у wishlist }
-    delete:
-      tags: [Wishlist]
-      summary: Видалити з wishlist
-      security: [{ BearerAuth: [] }]
-      responses:
-        '204': { description: Видалено }
-
-  /recommendations:
-    get:
-      tags: [Recommendations]
-      summary: AI-рекомендації на основі жанрів
-      security: [{ BearerAuth: [] }]
-      parameters:
-        - { name: genres, in: query, schema: { type: string }, description: "Через кому: Фентезі,Детектив" }
-      responses:
-        '200': { description: Список рекомендованих книг від Claude AI }
-
-  /chat/{exchange_id}:
-    get:
-      tags: [Chat]
-      summary: Повідомлення чату для обміну
-      security: [{ BearerAuth: [] }]
-      parameters:
-        - { name: exchange_id, in: path, required: true, schema: { type: integer } }
-      responses:
-        '200': { description: Список повідомлень }
-    post:
-      tags: [Chat]
-      summary: Надіслати повідомлення
-      security: [{ BearerAuth: [] }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [content]
-              properties:
-                content: { type: string, minLength: 1, maxLength: 1000 }
-      responses:
-        '201': { description: Повідомлення надіслано }
-
-  /ws/chat/{exchange_id}:
-    get:
-      tags: [WebSocket]
-      summary: WebSocket з'єднання для чату в реальному часі
-      description: |
-        Підключення: `ws://localhost:8000/ws/chat/{exchange_id}?token=<JWT>`
-
-        **Send:** `{"content": "Привіт!"}`
-
-        **Receive:** `{"type": "message", "exchange_id": 1, "sender_id": 2, "content": "Привіт!"}`
-      parameters:
-        - { name: exchange_id, in: path, required: true, schema: { type: integer } }
-        - { name: token, in: query, required: true, schema: { type: string } }
-      responses:
-        '101': { description: WebSocket Upgrade }
-
-  /health:
-    get:
-      tags: [Health]
-      summary: Health check
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              example: { status: ok, version: "1.0.0" }
+{
+  "openapi": "3.1.0",
+  "info":
+    {
+      "title": "BookSwap API",
+      "description": "BookSwap — Book Recommendations & Exchange Platform",
+      "version": "1.0.0",
+    },
+  "paths":
+    {
+      "/api/auth/register":
+        {
+          "post":
+            {
+              "tags": ["Auth"],
+              "summary": "Register",
+              "operationId": "register_api_auth_register_post",
+              "requestBody":
+                {
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            { "$ref": "#/components/schemas/UserRegister" },
+                        },
+                    },
+                  "required": true,
+                },
+              "responses":
+                {
+                  "201":
+                    {
+                      "description": "Successful Response",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/TokenResponse",
+                                },
+                            },
+                        },
+                    },
+                  "422":
+                    {
+                      "description": "Validation Error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/HTTPValidationError",
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+      "/api/auth/login":
+        {
+          "post":
+            {
+              "tags": ["Auth"],
+              "summary": "Login",
+              "operationId": "login_api_auth_login_post",
+              "requestBody":
+                {
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            { "$ref": "#/components/schemas/UserLogin" },
+                        },
+                    },
+                  "required": true,
+                },
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Successful Response",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/TokenResponse",
+                                },
+                            },
+                        },
+                    },
+                  "422":
+                    {
+                      "description": "Validation Error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/HTTPValidationError",
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+      "/api/users/me":
+        {
+          "get":
+            {
+              "tags": ["Users"],
+              "summary": "Get Me",
+              "operationId": "get_me_api_users_me_get",
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Successful Response",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                { "$ref": "#/components/schemas/UserBase" },
+                            },
+                        },
+                    },
+                },
+              "security": [{ "OAuth2PasswordBearer": [] }],
+            },
+          "patch":
+            {
+              "tags": ["Users"],
+              "summary": "Update Me",
+              "operationId": "update_me_api_users_me_patch",
+              "requestBody":
+                {
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            { "$ref": "#/components/schemas/UserUpdate" },
+                        },
+                    },
+                  "required": true,
+                },
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Successful Response",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                { "$ref": "#/components/schemas/UserBase" },
+                            },
+                        },
+                    },
+                  "422":
+                    {
+                      "description": "Validation Error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/HTTPValidationError",
+                                },
+                            },
+                        },
+                    },
+                },
+              "security": [{ "OAuth2PasswordBearer": [] }],
+            },
+        },
+      "/api/users/search":
+        {
+          "get":
+            {
+              "tags": ["Users"],
+              "summary": "Search Users",
+              "operationId": "search_users_api_users_search_get",
+              "parameters":
+                [
+                  {
+                    "name": "q",
+                    "in": "query",
+                    "required": true,
+                    "schema":
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Search query",
+                        "title": "Q",
+                      },
+                    "description": "Search query",
+                  },
+                ],
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Successful Response",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "type": "array",
+                                  "items":
+                                    {
+                                      "$ref": "#/components/schemas/UserPublic",
+                                    },
+                                  "title": "Response Search Users Api Users Search Get",
+                                },
+                            },
+                        },
+                    },
+                  "422":
+                    {
+                      "description": "Validation Error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/HTTPValidationError",
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+      "/api/users/{user_id}":
+        {
+          "get":
+            {
+              "tags": ["Users"],
+              "summary": "Get User",
+              "operationId": "get_user_api_users__user_id__get",
+              "parameters":
+                [
+                  {
+                    "name": "user_id",
+                    "in": "path",
+                    "required": true,
+                    "schema": { "type": "integer", "title": "User Id" },
+                  },
+                ],
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Successful Response",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                { "$ref": "#/components/schemas/UserPublic" },
+                            },
+                        },
+                    },
+                  "422":
+                    {
+                      "description": "Validation Error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/HTTPValidationError",
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+      "/api/users/{user_id}/reviews":
+        {
+          "get":
+            {
+              "tags": ["Users"],
+              "summary": "Get User Reviews",
+              "operationId": "get_user_reviews_api_users__user_id__reviews_get",
+              "parameters":
+                [
+                  {
+                    "name": "user_id",
+                    "in": "path",
+                    "required": true,
+                    "schema": { "type": "integer", "title": "User Id" },
+                  },
+                ],
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Successful Response",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "type": "array",
+                                  "items":
+                                    {
+                                      "$ref": "#/components/schemas/ReviewResponse",
+                                    },
+                                  "title": "Response Get User Reviews Api Users  User Id  Reviews Get",
+                                },
+                            },
+                        },
+                    },
+                  "422":
+                    {
+                      "description": "Validation Error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/HTTPValidationError",
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+      "/api/books":
+        {
+          "get":
+            {
+              "tags": ["Books"],
+              "summary": "List Books",
+              "operationId": "list_books_api_books_get",
+              "parameters":
+                [
+                  {
+                    "name": "q",
+                    "in": "query",
+                    "required": false,
+                    "schema":
+                      {
+                        "anyOf": [{ "type": "string" }, { "type": "null" }],
+                        "description": "Search by title or author",
+                        "title": "Q",
+                      },
+                    "description": "Search by title or author",
+                  },
+                  {
+                    "name": "genre",
+                    "in": "query",
+                    "required": false,
+                    "schema":
+                      {
+                        "anyOf":
+                          [
+                            { "$ref": "#/components/schemas/BookGenre" },
+                            { "type": "null" },
+                          ],
+                        "title": "Genre",
+                      },
+                  },
+                  {
+                    "name": "available_only",
+                    "in": "query",
+                    "required": false,
+                    "schema":
+                      {
+                        "type": "boolean",
+                        "default": false,
+                        "title": "Available Only",
+                      },
+                  },
+                  {
+                    "name": "owner_id",
+                    "in": "query",
+                    "required": false,
+                    "schema":
+                      {
+                        "anyOf": [{ "type": "integer" }, { "type": "null" }],
+                        "description": "Filter by owner ID",
+                        "title": "Owner Id",
+                      },
+                    "description": "Filter by owner ID",
+                  },
+                  {
+                    "name": "page",
+                    "in": "query",
+                    "required": false,
+                    "schema":
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "default": 1,
+                        "title": "Page",
+                      },
+                  },
+                  {
+                    "name": "page_size",
+                    "in": "query",
+                    "required": false,
+                    "schema":
+                      {
+                        "type": "integer",
+                        "maximum": 100,
+                        "minimum": 1,
+                        "default": 20,
+                        "title": "Page Size",
+                      },
+                  },
+                ],
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Successful Response",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/BookListResponse",
+                                },
+                            },
+                        },
+                    },
+                  "422":
+                    {
+                      "description": "Validation Error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/HTTPValidationError",
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+          "post":
+            {
+              "tags": ["Books"],
+              "summary": "Create Book",
+              "operationId": "create_book_api_books_post",
+              "security": [{ "OAuth2PasswordBearer": [] }],
+              "requestBody":
+                {
+                  "required": true,
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            { "$ref": "#/components/schemas/BookCreate" },
+                        },
+                    },
+                },
+              "responses":
+                {
+                  "201":
+                    {
+                      "description": "Successful Response",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                { "$ref": "#/components/schemas/BookResponse" },
+                            },
+                        },
+                    },
+                  "422":
+                    {
+                      "description": "Validation Error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/HTTPValidationError",
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+      "/api/books/{book_id}":
+        {
+          "get":
+            {
+              "tags": ["Books"],
+              "summary": "Get Book",
+              "operationId": "get_book_api_books__book_id__get",
+              "parameters":
+                [
+                  {
+                    "name": "book_id",
+                    "in": "path",
+                    "required": true,
+                    "schema": { "type": "integer", "title": "Book Id" },
+                  },
+                ],
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Successful Response",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                { "$ref": "#/components/schemas/BookResponse" },
+                            },
+                        },
+                    },
+                  "422":
+                    {
+                      "description": "Validation Error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/HTTPValidationError",
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+          "patch":
+            {
+              "tags": ["Books"],
+              "summary": "Update Book",
+              "operationId": "update_book_api_books__book_id__patch",
+              "security": [{ "OAuth2PasswordBearer": [] }],
+              "parameters":
+                [
+                  {
+                    "name": "book_id",
+                    "in": "path",
+                    "required": true,
+                    "schema": { "type": "integer", "title": "Book Id" },
+                  },
+                ],
+              "requestBody":
+                {
+                  "required": true,
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            { "$ref": "#/components/schemas/BookUpdate" },
+                        },
+                    },
+                },
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Successful Response",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                { "$ref": "#/components/schemas/BookResponse" },
+                            },
+                        },
+                    },
+                  "422":
+                    {
+                      "description": "Validation Error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/HTTPValidationError",
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+          "delete":
+            {
+              "tags": ["Books"],
+              "summary": "Delete Book",
+              "operationId": "delete_book_api_books__book_id__delete",
+              "security": [{ "OAuth2PasswordBearer": [] }],
+              "parameters":
+                [
+                  {
+                    "name": "book_id",
+                    "in": "path",
+                    "required": true,
+                    "schema": { "type": "integer", "title": "Book Id" },
+                  },
+                ],
+              "responses":
+                {
+                  "204": { "description": "Successful Response" },
+                  "422":
+                    {
+                      "description": "Validation Error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/HTTPValidationError",
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+      "/api/books/{book_id}/reviews":
+        {
+          "get":
+            {
+              "tags": ["Books"],
+              "summary": "Get Book Reviews",
+              "operationId": "get_book_reviews_api_books__book_id__reviews_get",
+              "parameters":
+                [
+                  {
+                    "name": "book_id",
+                    "in": "path",
+                    "required": true,
+                    "schema": { "type": "integer", "title": "Book Id" },
+                  },
+                  {
+                    "name": "skip",
+                    "in": "query",
+                    "required": false,
+                    "schema":
+                      { "type": "integer", "default": 0, "title": "Skip" },
+                  },
+                  {
+                    "name": "limit",
+                    "in": "query",
+                    "required": false,
+                    "schema":
+                      { "type": "integer", "default": 20, "title": "Limit" },
+                  },
+                ],
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Successful Response",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "type": "array",
+                                  "items":
+                                    {
+                                      "$ref": "#/components/schemas/ReviewResponse",
+                                    },
+                                  "title": "Response Get Book Reviews Api Books  Book Id  Reviews Get",
+                                },
+                            },
+                        },
+                    },
+                  "422":
+                    {
+                      "description": "Validation Error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/HTTPValidationError",
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+      "/api/reviews":
+        {
+          "post":
+            {
+              "tags": ["Reviews"],
+              "summary": "Create Review",
+              "operationId": "create_review_api_reviews_post",
+              "requestBody":
+                {
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            { "$ref": "#/components/schemas/ReviewCreate" },
+                        },
+                    },
+                  "required": true,
+                },
+              "responses":
+                {
+                  "201":
+                    {
+                      "description": "Successful Response",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/ReviewResponse",
+                                },
+                            },
+                        },
+                    },
+                  "422":
+                    {
+                      "description": "Validation Error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/HTTPValidationError",
+                                },
+                            },
+                        },
+                    },
+                },
+              "security": [{ "OAuth2PasswordBearer": [] }],
+            },
+        },
+      "/api/reviews/{review_id}":
+        {
+          "patch":
+            {
+              "tags": ["Reviews"],
+              "summary": "Update Review",
+              "operationId": "update_review_api_reviews__review_id__patch",
+              "security": [{ "OAuth2PasswordBearer": [] }],
+              "parameters":
+                [
+                  {
+                    "name": "review_id",
+                    "in": "path",
+                    "required": true,
+                    "schema": { "type": "integer", "title": "Review Id" },
+                  },
+                ],
+              "requestBody":
+                {
+                  "required": true,
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            { "$ref": "#/components/schemas/ReviewUpdate" },
+                        },
+                    },
+                },
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Successful Response",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/ReviewResponse",
+                                },
+                            },
+                        },
+                    },
+                  "422":
+                    {
+                      "description": "Validation Error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/HTTPValidationError",
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+          "delete":
+            {
+              "tags": ["Reviews"],
+              "summary": "Delete Review",
+              "operationId": "delete_review_api_reviews__review_id__delete",
+              "security": [{ "OAuth2PasswordBearer": [] }],
+              "parameters":
+                [
+                  {
+                    "name": "review_id",
+                    "in": "path",
+                    "required": true,
+                    "schema": { "type": "integer", "title": "Review Id" },
+                  },
+                ],
+              "responses":
+                {
+                  "204": { "description": "Successful Response" },
+                  "422":
+                    {
+                      "description": "Validation Error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/HTTPValidationError",
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+      "/api/exchanges":
+        {
+          "get":
+            {
+              "tags": ["Exchanges"],
+              "summary": "List Exchanges",
+              "operationId": "list_exchanges_api_exchanges_get",
+              "parameters":
+                [
+                  {
+                    "name": "skip",
+                    "in": "query",
+                    "required": false,
+                    "schema":
+                      { "type": "integer", "default": 0, "title": "Skip" },
+                  },
+                  {
+                    "name": "limit",
+                    "in": "query",
+                    "required": false,
+                    "schema":
+                      { "type": "integer", "default": 20, "title": "Limit" },
+                  },
+                ],
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Successful Response",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "type": "array",
+                                  "items":
+                                    {
+                                      "$ref": "#/components/schemas/ExchangeResponse",
+                                    },
+                                  "title": "Response List Exchanges Api Exchanges Get",
+                                },
+                            },
+                        },
+                    },
+                  "422":
+                    {
+                      "description": "Validation Error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/HTTPValidationError",
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+          "post":
+            {
+              "tags": ["Exchanges"],
+              "summary": "Create Exchange",
+              "operationId": "create_exchange_api_exchanges_post",
+              "security": [{ "OAuth2PasswordBearer": [] }],
+              "requestBody":
+                {
+                  "required": true,
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            { "$ref": "#/components/schemas/ExchangeCreate" },
+                        },
+                    },
+                },
+              "responses":
+                {
+                  "201":
+                    {
+                      "description": "Successful Response",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/ExchangeResponse",
+                                },
+                            },
+                        },
+                    },
+                  "422":
+                    {
+                      "description": "Validation Error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/HTTPValidationError",
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+      "/api/exchanges/my":
+        {
+          "get":
+            {
+              "tags": ["Exchanges"],
+              "summary": "My Exchanges",
+              "operationId": "my_exchanges_api_exchanges_my_get",
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Successful Response",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "items":
+                                    {
+                                      "$ref": "#/components/schemas/ExchangeResponse",
+                                    },
+                                  "type": "array",
+                                  "title": "Response My Exchanges Api Exchanges My Get",
+                                },
+                            },
+                        },
+                    },
+                },
+              "security": [{ "OAuth2PasswordBearer": [] }],
+            },
+        },
+      "/api/exchanges/between":
+        {
+          "get":
+            {
+              "tags": ["Exchanges"],
+              "summary": "Exchanges Between Users",
+              "operationId": "exchanges_between_users_api_exchanges_between_get",
+              "parameters":
+                [
+                  {
+                    "name": "user1",
+                    "in": "query",
+                    "required": true,
+                    "schema":
+                      {
+                        "type": "integer",
+                        "description": "First user ID",
+                        "title": "User1",
+                      },
+                    "description": "First user ID",
+                  },
+                  {
+                    "name": "user2",
+                    "in": "query",
+                    "required": true,
+                    "schema":
+                      {
+                        "type": "integer",
+                        "description": "Second user ID",
+                        "title": "User2",
+                      },
+                    "description": "Second user ID",
+                  },
+                ],
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Successful Response",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "type": "array",
+                                  "items":
+                                    {
+                                      "$ref": "#/components/schemas/ExchangeResponse",
+                                    },
+                                  "title": "Response Exchanges Between Users Api Exchanges Between Get",
+                                },
+                            },
+                        },
+                    },
+                  "422":
+                    {
+                      "description": "Validation Error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/HTTPValidationError",
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+      "/api/exchanges/{exchange_id}/accept":
+        {
+          "patch":
+            {
+              "tags": ["Exchanges"],
+              "summary": "Accept Exchange",
+              "operationId": "accept_exchange_api_exchanges__exchange_id__accept_patch",
+              "security": [{ "OAuth2PasswordBearer": [] }],
+              "parameters":
+                [
+                  {
+                    "name": "exchange_id",
+                    "in": "path",
+                    "required": true,
+                    "schema": { "type": "integer", "title": "Exchange Id" },
+                  },
+                ],
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Successful Response",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/ExchangeResponse",
+                                },
+                            },
+                        },
+                    },
+                  "422":
+                    {
+                      "description": "Validation Error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/HTTPValidationError",
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+      "/api/exchanges/{exchange_id}/reject":
+        {
+          "patch":
+            {
+              "tags": ["Exchanges"],
+              "summary": "Reject Exchange",
+              "operationId": "reject_exchange_api_exchanges__exchange_id__reject_patch",
+              "security": [{ "OAuth2PasswordBearer": [] }],
+              "parameters":
+                [
+                  {
+                    "name": "exchange_id",
+                    "in": "path",
+                    "required": true,
+                    "schema": { "type": "integer", "title": "Exchange Id" },
+                  },
+                ],
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Successful Response",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/ExchangeResponse",
+                                },
+                            },
+                        },
+                    },
+                  "422":
+                    {
+                      "description": "Validation Error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/HTTPValidationError",
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+      "/api/exchanges/{exchange_id}/complete":
+        {
+          "patch":
+            {
+              "tags": ["Exchanges"],
+              "summary": "Complete Exchange",
+              "operationId": "complete_exchange_api_exchanges__exchange_id__complete_patch",
+              "security": [{ "OAuth2PasswordBearer": [] }],
+              "parameters":
+                [
+                  {
+                    "name": "exchange_id",
+                    "in": "path",
+                    "required": true,
+                    "schema": { "type": "integer", "title": "Exchange Id" },
+                  },
+                ],
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Successful Response",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/ExchangeResponse",
+                                },
+                            },
+                        },
+                    },
+                  "422":
+                    {
+                      "description": "Validation Error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/HTTPValidationError",
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+      "/api/wishlist":
+        {
+          "get":
+            {
+              "tags": ["Wishlist"],
+              "summary": "Get Wishlist",
+              "operationId": "get_wishlist_api_wishlist_get",
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Successful Response",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "items":
+                                    {
+                                      "$ref": "#/components/schemas/WishlistItemResponse",
+                                    },
+                                  "type": "array",
+                                  "title": "Response Get Wishlist Api Wishlist Get",
+                                },
+                            },
+                        },
+                    },
+                },
+              "security": [{ "OAuth2PasswordBearer": [] }],
+            },
+        },
+      "/api/wishlist/{book_id}":
+        {
+          "post":
+            {
+              "tags": ["Wishlist"],
+              "summary": "Add To Wishlist",
+              "operationId": "add_to_wishlist_api_wishlist__book_id__post",
+              "security": [{ "OAuth2PasswordBearer": [] }],
+              "parameters":
+                [
+                  {
+                    "name": "book_id",
+                    "in": "path",
+                    "required": true,
+                    "schema": { "type": "integer", "title": "Book Id" },
+                  },
+                ],
+              "responses":
+                {
+                  "201":
+                    {
+                      "description": "Successful Response",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/WishlistItemResponse",
+                                },
+                            },
+                        },
+                    },
+                  "422":
+                    {
+                      "description": "Validation Error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/HTTPValidationError",
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+          "delete":
+            {
+              "tags": ["Wishlist"],
+              "summary": "Remove From Wishlist",
+              "operationId": "remove_from_wishlist_api_wishlist__book_id__delete",
+              "security": [{ "OAuth2PasswordBearer": [] }],
+              "parameters":
+                [
+                  {
+                    "name": "book_id",
+                    "in": "path",
+                    "required": true,
+                    "schema": { "type": "integer", "title": "Book Id" },
+                  },
+                ],
+              "responses":
+                {
+                  "204": { "description": "Successful Response" },
+                  "422":
+                    {
+                      "description": "Validation Error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/HTTPValidationError",
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+      "/api/chat/{exchange_id}":
+        {
+          "get":
+            {
+              "tags": ["Chat"],
+              "summary": "Get Messages",
+              "operationId": "get_messages_api_chat__exchange_id__get",
+              "security": [{ "OAuth2PasswordBearer": [] }],
+              "parameters":
+                [
+                  {
+                    "name": "exchange_id",
+                    "in": "path",
+                    "required": true,
+                    "schema": { "type": "integer", "title": "Exchange Id" },
+                  },
+                ],
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Successful Response",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "type": "array",
+                                  "items":
+                                    {
+                                      "$ref": "#/components/schemas/MessageResponse",
+                                    },
+                                  "title": "Response Get Messages Api Chat  Exchange Id  Get",
+                                },
+                            },
+                        },
+                    },
+                  "422":
+                    {
+                      "description": "Validation Error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/HTTPValidationError",
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+          "post":
+            {
+              "tags": ["Chat"],
+              "summary": "Send Message",
+              "operationId": "send_message_api_chat__exchange_id__post",
+              "security": [{ "OAuth2PasswordBearer": [] }],
+              "parameters":
+                [
+                  {
+                    "name": "exchange_id",
+                    "in": "path",
+                    "required": true,
+                    "schema": { "type": "integer", "title": "Exchange Id" },
+                  },
+                ],
+              "requestBody":
+                {
+                  "required": true,
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            { "$ref": "#/components/schemas/MessageCreate" },
+                        },
+                    },
+                },
+              "responses":
+                {
+                  "201":
+                    {
+                      "description": "Successful Response",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/MessageResponse",
+                                },
+                            },
+                        },
+                    },
+                  "422":
+                    {
+                      "description": "Validation Error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/HTTPValidationError",
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+      "/api/recommendations":
+        {
+          "get":
+            {
+              "tags": ["Recommendations"],
+              "summary": "Get Recommendations",
+              "operationId": "get_recommendations_api_recommendations_get",
+              "security": [{ "OAuth2PasswordBearer": [] }],
+              "parameters":
+                [
+                  {
+                    "name": "genres",
+                    "in": "query",
+                    "required": false,
+                    "schema":
+                      {
+                        "anyOf": [{ "type": "string" }, { "type": "null" }],
+                        "description": "Comma-separated genres",
+                        "title": "Genres",
+                      },
+                    "description": "Comma-separated genres",
+                  },
+                ],
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Successful Response",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "type": "array",
+                                  "items":
+                                    {
+                                      "$ref": "#/components/schemas/RecommendationResponse",
+                                    },
+                                  "title": "Response Get Recommendations Api Recommendations Get",
+                                },
+                            },
+                        },
+                    },
+                  "422":
+                    {
+                      "description": "Validation Error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/HTTPValidationError",
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+      "/api/friends/{user_id}":
+        {
+          "post":
+            {
+              "tags": ["Friends"],
+              "summary": "Add Friend",
+              "operationId": "add_friend_api_friends__user_id__post",
+              "security": [{ "OAuth2PasswordBearer": [] }],
+              "parameters":
+                [
+                  {
+                    "name": "user_id",
+                    "in": "path",
+                    "required": true,
+                    "schema": { "type": "integer", "title": "User Id" },
+                  },
+                ],
+              "responses":
+                {
+                  "201":
+                    {
+                      "description": "Successful Response",
+                      "content": { "application/json": { "schema": {} } },
+                    },
+                  "422":
+                    {
+                      "description": "Validation Error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "#/components/schemas/HTTPValidationError",
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+      "/api/friends":
+        {
+          "get":
+            {
+              "tags": ["Friends"],
+              "summary": "Get Friends",
+              "operationId": "get_friends_api_friends_get",
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Successful Response",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "items":
+                                    {
+                                      "$ref": "#/components/schemas/UserPublic",
+                                    },
+                                  "type": "array",
+                                  "title": "Response Get Friends Api Friends Get",
+                                },
+                            },
+                        },
+                    },
+                },
+              "security": [{ "OAuth2PasswordBearer": [] }],
+            },
+        },
+      "/health":
+        {
+          "get":
+            {
+              "tags": ["Health"],
+              "summary": "Health",
+              "operationId": "health_health_get",
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Successful Response",
+                      "content": { "application/json": { "schema": {} } },
+                    },
+                },
+            },
+        },
+    },
+  "components":
+    {
+      "schemas":
+        {
+          "BookCondition":
+            {
+              "type": "string",
+              "enum": ["new", "good", "fair", "poor"],
+              "title": "BookCondition",
+            },
+          "BookCreate":
+            {
+              "properties":
+                {
+                  "title":
+                    {
+                      "type": "string",
+                      "maxLength": 300,
+                      "minLength": 1,
+                      "title": "Title",
+                    },
+                  "author":
+                    {
+                      "type": "string",
+                      "maxLength": 200,
+                      "minLength": 1,
+                      "title": "Author",
+                    },
+                  "description":
+                    {
+                      "anyOf": [{ "type": "string" }, { "type": "null" }],
+                      "title": "Description",
+                    },
+                  "isbn":
+                    {
+                      "anyOf": [{ "type": "string" }, { "type": "null" }],
+                      "title": "Isbn",
+                    },
+                  "cover_url":
+                    {
+                      "anyOf": [{ "type": "string" }, { "type": "null" }],
+                      "title": "Cover Url",
+                    },
+                  "genre": { "$ref": "#/components/schemas/BookGenre" },
+                  "published_year":
+                    {
+                      "anyOf":
+                        [
+                          {
+                            "type": "integer",
+                            "maximum": 2100,
+                            "minimum": 1000,
+                          },
+                          { "type": "null" },
+                        ],
+                      "title": "Published Year",
+                    },
+                  "language":
+                    {
+                      "type": "string",
+                      "title": "Language",
+                      "default": "Ukrainian",
+                    },
+                  "condition":
+                    {
+                      "allOf":
+                        [{ "$ref": "#/components/schemas/BookCondition" }],
+                      "default": "good",
+                    },
+                  "is_available_for_exchange":
+                    {
+                      "type": "boolean",
+                      "title": "Is Available For Exchange",
+                      "default": true,
+                    },
+                },
+              "type": "object",
+              "required": ["title", "author", "genre"],
+              "title": "BookCreate",
+            },
+          "BookGenre":
+            {
+              "type": "string",
+              "enum":
+                [
+                  "fiction",
+                  "non_fiction",
+                  "fantasy",
+                  "sci_fi",
+                  "mystery",
+                  "romance",
+                  "thriller",
+                  "horror",
+                  "biography",
+                  "history",
+                  "science",
+                  "self_help",
+                  "children",
+                  "poetry",
+                  "other",
+                ],
+              "title": "BookGenre",
+            },
+          "BookListResponse":
+            {
+              "properties":
+                {
+                  "items":
+                    {
+                      "items": { "$ref": "#/components/schemas/BookResponse" },
+                      "type": "array",
+                      "title": "Items",
+                    },
+                  "total": { "type": "integer", "title": "Total" },
+                  "page": { "type": "integer", "title": "Page" },
+                  "page_size": { "type": "integer", "title": "Page Size" },
+                  "pages": { "type": "integer", "title": "Pages" },
+                },
+              "type": "object",
+              "required": ["items", "total", "page", "page_size", "pages"],
+              "title": "BookListResponse",
+            },
+          "BookResponse":
+            {
+              "properties":
+                {
+                  "id": { "type": "integer", "title": "Id" },
+                  "title": { "type": "string", "title": "Title" },
+                  "author": { "type": "string", "title": "Author" },
+                  "description":
+                    {
+                      "anyOf": [{ "type": "string" }, { "type": "null" }],
+                      "title": "Description",
+                    },
+                  "isbn":
+                    {
+                      "anyOf": [{ "type": "string" }, { "type": "null" }],
+                      "title": "Isbn",
+                    },
+                  "cover_url":
+                    {
+                      "anyOf": [{ "type": "string" }, { "type": "null" }],
+                      "title": "Cover Url",
+                    },
+                  "genre": { "$ref": "#/components/schemas/BookGenre" },
+                  "published_year":
+                    {
+                      "anyOf": [{ "type": "integer" }, { "type": "null" }],
+                      "title": "Published Year",
+                    },
+                  "language": { "type": "string", "title": "Language" },
+                  "condition": { "$ref": "#/components/schemas/BookCondition" },
+                  "is_available_for_exchange":
+                    { "type": "boolean", "title": "Is Available For Exchange" },
+                  "owner_id": { "type": "integer", "title": "Owner Id" },
+                  "owner": { "$ref": "#/components/schemas/UserPublic" },
+                  "average_rating":
+                    {
+                      "anyOf": [{ "type": "number" }, { "type": "null" }],
+                      "title": "Average Rating",
+                    },
+                  "review_count":
+                    {
+                      "type": "integer",
+                      "title": "Review Count",
+                      "default": 0,
+                    },
+                  "created_at":
+                    {
+                      "type": "string",
+                      "format": "date-time",
+                      "title": "Created At",
+                    },
+                },
+              "type": "object",
+              "required":
+                [
+                  "id",
+                  "title",
+                  "author",
+                  "description",
+                  "isbn",
+                  "cover_url",
+                  "genre",
+                  "published_year",
+                  "language",
+                  "condition",
+                  "is_available_for_exchange",
+                  "owner_id",
+                  "owner",
+                  "created_at",
+                ],
+              "title": "BookResponse",
+            },
+          "BookUpdate":
+            {
+              "properties":
+                {
+                  "title":
+                    {
+                      "anyOf": [{ "type": "string" }, { "type": "null" }],
+                      "title": "Title",
+                    },
+                  "description":
+                    {
+                      "anyOf": [{ "type": "string" }, { "type": "null" }],
+                      "title": "Description",
+                    },
+                  "cover_url":
+                    {
+                      "anyOf": [{ "type": "string" }, { "type": "null" }],
+                      "title": "Cover Url",
+                    },
+                  "condition":
+                    {
+                      "anyOf":
+                        [
+                          { "$ref": "#/components/schemas/BookCondition" },
+                          { "type": "null" },
+                        ],
+                    },
+                  "is_available_for_exchange":
+                    {
+                      "anyOf": [{ "type": "boolean" }, { "type": "null" }],
+                      "title": "Is Available For Exchange",
+                    },
+                },
+              "type": "object",
+              "title": "BookUpdate",
+            },
+          "ExchangeCreate":
+            {
+              "properties":
+                {
+                  "offered_book_id":
+                    {
+                      "anyOf": [{ "type": "integer" }, { "type": "null" }],
+                      "title": "Offered Book Id",
+                    },
+                  "requested_book_id":
+                    { "type": "integer", "title": "Requested Book Id" },
+                  "message":
+                    {
+                      "anyOf":
+                        [
+                          { "type": "string", "maxLength": 500 },
+                          { "type": "null" },
+                        ],
+                      "title": "Message",
+                    },
+                },
+              "type": "object",
+              "required": ["requested_book_id"],
+              "title": "ExchangeCreate",
+            },
+          "ExchangeResponse":
+            {
+              "properties":
+                {
+                  "id": { "type": "integer", "title": "Id" },
+                  "status": { "$ref": "#/components/schemas/ExchangeStatus" },
+                  "message":
+                    {
+                      "anyOf": [{ "type": "string" }, { "type": "null" }],
+                      "title": "Message",
+                    },
+                  "requester": { "$ref": "#/components/schemas/UserPublic" },
+                  "owner": { "$ref": "#/components/schemas/UserPublic" },
+                  "offered_book":
+                    {
+                      "anyOf":
+                        [
+                          { "$ref": "#/components/schemas/BookResponse" },
+                          { "type": "null" },
+                        ],
+                    },
+                  "requested_book":
+                    { "$ref": "#/components/schemas/BookResponse" },
+                  "created_at":
+                    {
+                      "type": "string",
+                      "format": "date-time",
+                      "title": "Created At",
+                    },
+                  "updated_at":
+                    {
+                      "anyOf":
+                        [
+                          { "type": "string", "format": "date-time" },
+                          { "type": "null" },
+                        ],
+                      "title": "Updated At",
+                    },
+                },
+              "type": "object",
+              "required":
+                [
+                  "id",
+                  "status",
+                  "message",
+                  "requester",
+                  "owner",
+                  "requested_book",
+                  "created_at",
+                  "updated_at",
+                ],
+              "title": "ExchangeResponse",
+            },
+          "ExchangeStatus":
+            {
+              "type": "string",
+              "enum":
+                ["pending", "accepted", "completed", "rejected", "cancelled"],
+              "title": "ExchangeStatus",
+            },
+          "HTTPValidationError":
+            {
+              "properties":
+                {
+                  "detail":
+                    {
+                      "items":
+                        { "$ref": "#/components/schemas/ValidationError" },
+                      "type": "array",
+                      "title": "Detail",
+                    },
+                },
+              "type": "object",
+              "title": "HTTPValidationError",
+            },
+          "MessageCreate":
+            {
+              "properties":
+                {
+                  "content":
+                    {
+                      "type": "string",
+                      "maxLength": 1000,
+                      "minLength": 1,
+                      "title": "Content",
+                    },
+                },
+              "type": "object",
+              "required": ["content"],
+              "title": "MessageCreate",
+            },
+          "MessageResponse":
+            {
+              "properties":
+                {
+                  "id": { "type": "integer", "title": "Id" },
+                  "exchange_id": { "type": "integer", "title": "Exchange Id" },
+                  "sender": { "$ref": "#/components/schemas/UserPublic" },
+                  "content": { "type": "string", "title": "Content" },
+                  "is_read": { "type": "boolean", "title": "Is Read" },
+                  "created_at":
+                    {
+                      "type": "string",
+                      "format": "date-time",
+                      "title": "Created At",
+                    },
+                },
+              "type": "object",
+              "required":
+                [
+                  "id",
+                  "exchange_id",
+                  "sender",
+                  "content",
+                  "is_read",
+                  "created_at",
+                ],
+              "title": "MessageResponse",
+            },
+          "RecommendationResponse":
+            {
+              "properties":
+                {
+                  "title": { "type": "string", "title": "Title" },
+                  "author": { "type": "string", "title": "Author" },
+                  "genre": { "type": "string", "title": "Genre" },
+                  "reason": { "type": "string", "title": "Reason" },
+                },
+              "type": "object",
+              "required": ["title", "author", "genre", "reason"],
+              "title": "RecommendationResponse",
+            },
+          "ReviewCreate":
+            {
+              "properties":
+                {
+                  "book_id": { "type": "integer", "title": "Book Id" },
+                  "rating":
+                    {
+                      "type": "integer",
+                      "maximum": 5,
+                      "minimum": 1,
+                      "title": "Rating",
+                    },
+                  "content":
+                    {
+                      "anyOf":
+                        [
+                          { "type": "string", "maxLength": 2000 },
+                          { "type": "null" },
+                        ],
+                      "title": "Content",
+                    },
+                },
+              "type": "object",
+              "required": ["book_id", "rating"],
+              "title": "ReviewCreate",
+            },
+          "ReviewResponse":
+            {
+              "properties":
+                {
+                  "id": { "type": "integer", "title": "Id" },
+                  "rating": { "type": "integer", "title": "Rating" },
+                  "content":
+                    {
+                      "anyOf": [{ "type": "string" }, { "type": "null" }],
+                      "title": "Content",
+                    },
+                  "user": { "$ref": "#/components/schemas/UserPublic" },
+                  "book_id": { "type": "integer", "title": "Book Id" },
+                  "created_at":
+                    {
+                      "type": "string",
+                      "format": "date-time",
+                      "title": "Created At",
+                    },
+                  "updated_at":
+                    {
+                      "anyOf":
+                        [
+                          { "type": "string", "format": "date-time" },
+                          { "type": "null" },
+                        ],
+                      "title": "Updated At",
+                    },
+                },
+              "type": "object",
+              "required":
+                [
+                  "id",
+                  "rating",
+                  "content",
+                  "user",
+                  "book_id",
+                  "created_at",
+                  "updated_at",
+                ],
+              "title": "ReviewResponse",
+            },
+          "ReviewUpdate":
+            {
+              "properties":
+                {
+                  "rating":
+                    {
+                      "anyOf":
+                        [
+                          { "type": "integer", "maximum": 5, "minimum": 1 },
+                          { "type": "null" },
+                        ],
+                      "title": "Rating",
+                    },
+                  "content":
+                    {
+                      "anyOf": [{ "type": "string" }, { "type": "null" }],
+                      "title": "Content",
+                    },
+                },
+              "type": "object",
+              "title": "ReviewUpdate",
+            },
+          "TokenResponse":
+            {
+              "properties":
+                {
+                  "access_token": { "type": "string", "title": "Access Token" },
+                  "refresh_token":
+                    { "type": "string", "title": "Refresh Token" },
+                  "token_type":
+                    {
+                      "type": "string",
+                      "title": "Token Type",
+                      "default": "bearer",
+                    },
+                },
+              "type": "object",
+              "required": ["access_token", "refresh_token"],
+              "title": "TokenResponse",
+            },
+          "UserBase":
+            {
+              "properties":
+                {
+                  "id": { "type": "integer", "title": "Id" },
+                  "email": { "type": "string", "title": "Email" },
+                  "username": { "type": "string", "title": "Username" },
+                  "full_name":
+                    {
+                      "anyOf": [{ "type": "string" }, { "type": "null" }],
+                      "title": "Full Name",
+                    },
+                  "bio":
+                    {
+                      "anyOf": [{ "type": "string" }, { "type": "null" }],
+                      "title": "Bio",
+                    },
+                  "city":
+                    {
+                      "anyOf": [{ "type": "string" }, { "type": "null" }],
+                      "title": "City",
+                    },
+                  "avatar_url":
+                    {
+                      "anyOf": [{ "type": "string" }, { "type": "null" }],
+                      "title": "Avatar Url",
+                    },
+                  "created_at":
+                    {
+                      "type": "string",
+                      "format": "date-time",
+                      "title": "Created At",
+                    },
+                },
+              "type": "object",
+              "required":
+                [
+                  "id",
+                  "email",
+                  "username",
+                  "full_name",
+                  "bio",
+                  "city",
+                  "avatar_url",
+                  "created_at",
+                ],
+              "title": "UserBase",
+            },
+          "UserLogin":
+            {
+              "properties":
+                {
+                  "email":
+                    { "type": "string", "format": "email", "title": "Email" },
+                  "password": { "type": "string", "title": "Password" },
+                },
+              "type": "object",
+              "required": ["email", "password"],
+              "title": "UserLogin",
+            },
+          "UserPublic":
+            {
+              "properties":
+                {
+                  "id": { "type": "integer", "title": "Id" },
+                  "username": { "type": "string", "title": "Username" },
+                  "full_name":
+                    {
+                      "anyOf": [{ "type": "string" }, { "type": "null" }],
+                      "title": "Full Name",
+                    },
+                  "avatar_url":
+                    {
+                      "anyOf": [{ "type": "string" }, { "type": "null" }],
+                      "title": "Avatar Url",
+                    },
+                  "city":
+                    {
+                      "anyOf": [{ "type": "string" }, { "type": "null" }],
+                      "title": "City",
+                    },
+                  "created_at":
+                    {
+                      "type": "string",
+                      "format": "date-time",
+                      "title": "Created At",
+                    },
+                },
+              "type": "object",
+              "required":
+                [
+                  "id",
+                  "username",
+                  "full_name",
+                  "avatar_url",
+                  "city",
+                  "created_at",
+                ],
+              "title": "UserPublic",
+            },
+          "UserRegister":
+            {
+              "properties":
+                {
+                  "email":
+                    { "type": "string", "format": "email", "title": "Email" },
+                  "username":
+                    {
+                      "type": "string",
+                      "maxLength": 50,
+                      "minLength": 3,
+                      "title": "Username",
+                    },
+                  "password":
+                    {
+                      "type": "string",
+                      "maxLength": 100,
+                      "minLength": 8,
+                      "title": "Password",
+                    },
+                  "full_name":
+                    {
+                      "anyOf": [{ "type": "string" }, { "type": "null" }],
+                      "title": "Full Name",
+                    },
+                },
+              "type": "object",
+              "required": ["email", "username", "password"],
+              "title": "UserRegister",
+            },
+          "UserUpdate":
+            {
+              "properties":
+                {
+                  "full_name":
+                    {
+                      "anyOf": [{ "type": "string" }, { "type": "null" }],
+                      "title": "Full Name",
+                    },
+                  "bio":
+                    {
+                      "anyOf": [{ "type": "string" }, { "type": "null" }],
+                      "title": "Bio",
+                    },
+                  "city":
+                    {
+                      "anyOf": [{ "type": "string" }, { "type": "null" }],
+                      "title": "City",
+                    },
+                  "avatar_url":
+                    {
+                      "anyOf": [{ "type": "string" }, { "type": "null" }],
+                      "title": "Avatar Url",
+                    },
+                },
+              "type": "object",
+              "title": "UserUpdate",
+            },
+          "ValidationError":
+            {
+              "properties":
+                {
+                  "loc":
+                    {
+                      "items":
+                        {
+                          "anyOf":
+                            [{ "type": "string" }, { "type": "integer" }],
+                        },
+                      "type": "array",
+                      "title": "Location",
+                    },
+                  "msg": { "type": "string", "title": "Message" },
+                  "type": { "type": "string", "title": "Error Type" },
+                },
+              "type": "object",
+              "required": ["loc", "msg", "type"],
+              "title": "ValidationError",
+            },
+          "WishlistItemResponse":
+            {
+              "properties":
+                {
+                  "id": { "type": "integer", "title": "Id" },
+                  "book": { "$ref": "#/components/schemas/BookResponse" },
+                  "added_at":
+                    {
+                      "type": "string",
+                      "format": "date-time",
+                      "title": "Added At",
+                    },
+                },
+              "type": "object",
+              "required": ["id", "book", "added_at"],
+              "title": "WishlistItemResponse",
+            },
+        },
+      "securitySchemes":
+        {
+          "OAuth2PasswordBearer":
+            {
+              "type": "oauth2",
+              "flows":
+                { "password": { "scopes": {}, "tokenUrl": "/api/auth/login" } },
+            },
+        },
+    },
+}
