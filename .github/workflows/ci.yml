@@ -134,7 +134,6 @@ jobs:
         env:
           DATABASE_URL: sqlite+aiosqlite:///:memory:
           SECRET_KEY: test-secret-key
-          ANTHROPIC_API_KEY: "${{ secrets.ANTHROPIC_API_KEY }}"
         run: pytest tests/integration/ -v
 
       - name: Upload coverage
