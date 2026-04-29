@@ -1,5 +1,5 @@
 import { MessageCircle, Send, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { chatApi } from "../../api/client";
 import useAuthStore from "../../store/authStore";
 import styles from "./ChatModal.module.css";
@@ -11,17 +11,28 @@ export default function ChatModal({ exchange, onClose }) {
   const [isLoading, setIsLoading] = useState(true);
   const messagesEndRef = useRef(null);
 
+  const loadMessages = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const response = await chatApi.getMessages(exchange.id);
+      setMessages(response.data);
+    } catch (error) {
+      console.error("Error loading messages:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [exchange]);
+
   useEffect(() => {
     if (exchange) {
       loadMessages();
     }
-  }, [exchange]);
+  }, [exchange, loadMessages]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  const loadMessages = async () => {
     try {
       setIsLoading(true);
       const response = await chatApi.getMessages(exchange.id);

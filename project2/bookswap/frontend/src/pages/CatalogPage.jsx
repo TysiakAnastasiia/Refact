@@ -1,7 +1,7 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw, Search } from "lucide-react";
 import { useState } from "react";
-import { booksApi, exchangesApi } from "../api/client";
+import { booksApi } from "../api/client";
 import AddBookModal from "../components/books/AddBookModal";
 import BookCard from "../components/books/BookCard";
 import ExchangeModal from "../components/exchanges/ExchangeModal";
@@ -42,30 +42,6 @@ export default function CatalogPage() {
     queryKey: ["user-books", user?.id],
     queryFn: () => booksApi.list({ owner_id: user.id }).then((r) => r.data),
     enabled: !!user,
-  });
-
-  const createExchange = useMutation({
-    mutationFn: (requestedBookId) => {
-      const firstUserBook = userBooks[0];
-      if (!firstUserBook) {
-        throw new Error("У вас немає книг для обміну");
-      }
-      return exchangesApi.create({
-        offered_book_id: firstUserBook.id,
-        requested_book_id: requestedBookId,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(["exchanges"]);
-      alert("✅ Пропозицію обміну надіслано!");
-    },
-    onError: (e) => {
-      console.error("Error creating exchange:", e);
-      alert(
-        "❌ Помилка: " +
-          (e.response?.data?.detail || e.message || "Спробуйте ще раз")
-      );
-    },
   });
 
   const handleExchangeRequest = (book) => {

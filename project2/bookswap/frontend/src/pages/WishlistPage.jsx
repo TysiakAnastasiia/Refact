@@ -1,20 +1,15 @@
 // WishlistPage.jsx
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { wishlistApi } from '../api/client'
-import BookCard from '../components/books/BookCard'
-import styles from './WishlistPage.module.css'
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { wishlistApi } from "../api/client";
+import BookCard from "../components/books/BookCard";
+import styles from "./WishlistPage.module.css";
 
 export default function WishlistPage() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   const { data: items = [], isLoading } = useQuery({
-    queryKey: ['wishlist'],
-    queryFn: () => wishlistApi.get().then(r => r.data),
-  })
-
-  const remove = useMutation({
-    mutationFn: (bookId) => wishlistApi.remove(bookId),
-    onSuccess: () => queryClient.invalidateQueries(['wishlist']),
-  })
+    queryKey: ["wishlist"],
+    queryFn: () => wishlistApi.get().then((r) => r.data),
+  });
 
   return (
     <div className={styles.page}>
@@ -30,16 +25,18 @@ export default function WishlistPage() {
           <div className={styles.empty}>
             <span>♡</span>
             <p>Ваш список бажань порожній</p>
-            <p className={styles.emptySub}>Додайте книги, які хочете прочитати або отримати в обмін</p>
+            <p className={styles.emptySub}>
+              Додайте книги, які хочете прочитати або отримати в обмін
+            </p>
           </div>
         ) : (
           <div className={styles.grid}>
-            {items.map(item => (
+            {items.map((item) => (
               <BookCard key={item.id} book={item.book} />
             ))}
           </div>
         )}
       </div>
     </div>
-  )
+  );
 }

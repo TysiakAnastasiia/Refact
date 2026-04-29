@@ -7,7 +7,16 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import verify_password, get_password_hash, create_access_token, create_refresh_token
-from app.models import User, Book, Review, Exchange, WishlistItem, Message, ExchangeStatus
+from app.models import (
+    User,
+    Book,
+    Review,
+    Exchange,
+    WishlistItem,
+    Message,
+    ExchangeStatus,
+    Friendship,
+)
 from app.repositories.book import BookRepository
 from app.repositories import (
     UserRepository, ReviewRepository, ExchangeRepository,
@@ -337,31 +346,37 @@ class FriendshipService:
         self.friendship_repo = FriendshipRepository(db)
 
     async def add_friend(self, requester_id: int, addressee_id: int) -> dict:
-        # Check if already friends
         existing = await self.friendship_repo.get_friendship(requester_id, addressee_id)
         if existing:
             raise HTTPException(status_code=400, detail="Already friends or request pending")
-        
+
         if requester_id == addressee_id:
             raise HTTPException(status_code=400, detail="Cannot add yourself as friend")
-        
-        # Create friendship (automatically accepted for simplicity)
-        friendship = Friendship(requester_id=requester_id, addressee_id=addressee_id, status="accepted")
+
+        friendship = Friendship(
+            requester_id=requester_id,
+            addressee_id=addressee_id,
+            status="accepted",
+        )
         created_friendship = await self.friendship_repo.create(friendship)
-        
-        # Emit friend added event
-        await event_manager.notify(Event(
-            EventType.FRIEND_ADDED,
-            {
-                'friendship_id': created_friendship.id,
-                'requester_id': requester_id,
-                'addressee_id': addressee_id,
-                'status': created_friendship.status,
-                'created_at': created_friendship.created_at.isoformat()
-            }
-        ))
-        
-        return {"status": "success", "message": "Friend added successfully"}
+
+        await event_manager.notify(
+            Event(
+                EventType.FRIEND_ADDED,
+                {
+                    'friendship_id': created_friendship.id,
+                    'requester_id': requester_id,
+                    'addressee_id': addressee_id,
+                    'status': created_friendship.status,
+                    'created_at': created_friendship.created_at.isoformat(),
+                },
+            )
+        )
+
+        return {
+            "status": "success",
+            "message": "Friend added successfully",
+        }
 
     async def get_user_friends(self, user_id: int) -> Sequence[User]:
         return await self.friendship_repo.get_user_friends(user_id)
