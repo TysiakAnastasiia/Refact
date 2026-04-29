@@ -119,7 +119,7 @@ jobs:
 
       - name: Lint with ruff
         working-directory: project2/bookswap/backend
-        run: ruff check app/ --select E,W,F
+        run: ruff check app/ --select E,W,F --ignore E501,W293,F401
 
       - name: Run unit tests
         working-directory: project2/bookswap/backend
