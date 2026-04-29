@@ -17,7 +17,10 @@ api.interceptors.request.use((config) => {
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-  } catch (_) {}
+  } catch (error) {
+    // Ignore invalid stored auth data.
+    void error;
+  }
   return config;
 });
 

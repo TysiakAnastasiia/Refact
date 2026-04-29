@@ -2,7 +2,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { usersApi } from "../api/client";
+import { booksApi, exchangesApi, usersApi } from "../api/client";
+import BookCard from "../components/books/BookCard";
 import StarRating from "../components/ui/StarRating";
 import useAuthStore from "../store/authStore";
 import styles from "./ProfilePage.module.css";
@@ -107,7 +108,7 @@ export default function ProfilePage() {
             {isOwn && editing && (
               <form className={styles.editForm} onSubmit={handleSubmit}>
                 <div className={styles.formGroup}>
-                  <label>Повне ім'я</label>
+                  <label>Повне ім&apos;я</label>
                   <input
                     type="text"
                     value={form.full_name || profile.full_name || ""}

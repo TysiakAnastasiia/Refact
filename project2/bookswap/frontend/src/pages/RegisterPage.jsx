@@ -41,7 +41,7 @@ export default function RegisterPage() {
 
         <form className={styles.form} onSubmit={handleSubmit}>
           <div className={styles.field}>
-            <label className={styles.label}>Ім'я та прізвище</label>
+            <label className={styles.label}>Ім&apos;я та прізвище</label>
             <input
               className={styles.input}
               value={form.full_name}

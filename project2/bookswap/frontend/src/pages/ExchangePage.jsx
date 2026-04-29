@@ -130,7 +130,9 @@ export default function ExchangePage() {
                     </div>
                   </div>
                 </div>
-                {ex.message && <p className={styles.message}>"{ex.message}"</p>}
+                {ex.message && (
+                  <p className={styles.message}>&quot;{ex.message}&quot;</p>
+                )}
                 <div className={styles.cardFooter}>
                   <span
                     className={`${styles.status} ${styles[STATUS_COLORS[ex.status]]}`}

@@ -12,6 +12,7 @@ const makeWrapper =
       <MemoryRouter>{children}</MemoryRouter>
     </QueryClientProvider>
   );
+makeWrapper.displayName = "QueryClientWrapper";
 
 const makeQueryClient = () =>
   new QueryClient({ defaultOptions: { queries: { retry: false } } });
