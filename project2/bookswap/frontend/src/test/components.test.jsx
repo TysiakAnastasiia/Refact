@@ -13,18 +13,7 @@ function QueryClientWrapper({ children }) {
     </QueryClientProvider>
   );
 }
-
-const makeWrapper =
-  (queryClient) =>
-  ({ children }) => (
-    <QueryClientProvider client={queryClient}>
-      <MemoryRouter>{children}</MemoryRouter>
-    </QueryClientProvider>
-  );
-makeWrapper.displayName = "QueryClientWrapper";
-
-const makeQueryClient = () =>
-  new QueryClient({ defaultOptions: { queries: { retry: false } } });
+QueryClientWrapper.displayName = "QueryClientWrapper";
 
 //  Mock data
 const mockBook = {
