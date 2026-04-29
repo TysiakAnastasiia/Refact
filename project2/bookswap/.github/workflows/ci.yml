@@ -7,7 +7,6 @@ on:
     branches: [main]
 
 jobs:
-  # ─── Backend ──────────────────────────────────────────────────────────────
   backend-lint-test:
     name: 🐍 Backend — Lint & Test
     runs-on: ubuntu-latest
@@ -66,7 +65,6 @@ jobs:
         with:
           file: backend/coverage.xml
 
-  # ─── Frontend ─────────────────────────────────────────────────────────────
   frontend-lint-test:
     name: ⚛️ Frontend — Lint & Test
     runs-on: ubuntu-latest
@@ -100,7 +98,6 @@ jobs:
           VITE_WS_URL: ws://localhost:8000/ws
         run: npm run build
 
-  # ─── Docker build ─────────────────────────────────────────────────────────
   docker-build:
     name: 🐳 Docker Build Check
     runs-on: ubuntu-latest

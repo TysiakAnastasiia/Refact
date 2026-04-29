@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import User, Review, Exchange, WishlistItem, Message, ExchangeStatus, Book, Friendship
 from app.repositories.base import BaseRepository
+from app.repositories.book import BookRepository
 
 
 class UserRepository(BaseRepository[User]):

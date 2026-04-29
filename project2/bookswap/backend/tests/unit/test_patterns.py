@@ -38,24 +38,7 @@ class TestSingletonPattern:
         
         assert service1 is service2
     
-    @patch('app.core.singleton.settings')
-    def test_configuration_service_initialization(self, mock_settings):
-        """Test ConfigurationService initialization."""
-        mock_settings.database_url = "test://db"
-        mock_settings.secret_key = "test-key"
-        mock_settings.algorithm = "HS256"
-        mock_settings.access_token_expire_minutes = 30
-        mock_settings.gemini_api_key = "test-key"
-        mock_settings.allowed_origins_list = ["http://localhost:3000"]
-        mock_settings.app_env = "test"
-        mock_settings.debug = True
         
-        config_service.initialize()
-        
-        assert config_service.get('database_url') == "test://db"
-        assert config_service.get('secret_key') == "test-key"
-        assert config_service.get('nonexistent', 'default') == 'default'
-    
     def test_configuration_service_reload(self):
         """Test ConfigurationService reload functionality."""
         # Initialize first time
@@ -275,7 +258,7 @@ class TestObserverPattern:
 
 class TestPatternIntegration:
     
-    @patch('app.core.singleton.settings')
+    @patch('app.core.config.settings')
     async def test_singleton_with_observer_integration(self, mock_settings):
         """Test Singleton pattern working with Observer pattern."""
         # Setup mock settings

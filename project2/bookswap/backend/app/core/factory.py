@@ -9,8 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services import (
     AuthService, UserService, BookService, ReviewService,
-    ExchangeService, WishlistService, ChatService, FriendshipService,
-    RecommendationService
+    ExchangeService, WishlistService, ChatService, FriendshipService
 )
 from app.repositories import (
     UserRepository, BookRepository, ReviewRepository,
@@ -43,7 +42,6 @@ class DatabaseServiceFactory(ServiceFactory):
             'wishlist': WishlistService,
             'chat': ChatService,
             'friendship': FriendshipService,
-            'recommendations': RecommendationService,
         }
     
     def create_service(self, service_type: str, db: AsyncSession, **kwargs) -> Any:
@@ -53,11 +51,7 @@ class DatabaseServiceFactory(ServiceFactory):
         
         service_class = self._service_registry[service_type]
         
-        # Special handling for services with extra dependencies
-        if service_type == 'recommendations':
-            return service_class()
-        else:
-            return service_class(db)
+        return service_class(db)
     
     def register_service(self, service_type: str, service_class: Type) -> None:
         """Register a new service type."""
