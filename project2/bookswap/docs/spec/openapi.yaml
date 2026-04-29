@@ -1,0 +1,268 @@
+openapi: 3.0.3
+info:
+  title: BookSwap API
+  description: |
+    REST API для платформи обміну книгами BookSwap.
+
+    ## Автентифікація
+    Використовується JWT Bearer token. Отримайте токен через `/api/auth/login`
+    і передавайте його у заголовку: `Authorization: Bearer <token>`
+
+    ## Ролі
+    - **Анонім** — перегляд каталогу, книг, рецензій
+    - **Авторизований користувач** — всі дії з книгами, обмін, чат, wishlist, рекомендації
+  version: 1.0.0
+  contact:
+    name: BookSwap Team
+
+servers:
+  - url: http://localhost:8000/api
+    description: Development
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    TokenResponse:
+      type: object
+      properties:
+        access_token: { type: string }
+        refresh_token: { type: string }
+        token_type: { type: string, example: bearer }
+
+    BookGenre:
+      type: string
+      enum: [fiction, non_fiction, fantasy, sci_fi, mystery, romance, thriller, horror, biography, history, science, self_help, children, poetry, other]
+
+    BookCondition:
+      type: string
+      enum: [new, good, fair, poor]
+
+    ExchangeStatus:
+      type: string
+      enum: [pending, accepted, completed, rejected, cancelled]
+
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Реєстрація нового користувача
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, username, password]
+              properties:
+                email: { type: string, format: email }
+                username: { type: string, minLength: 3 }
+                password: { type: string, minLength: 8 }
+                full_name: { type: string }
+      responses:
+        '201': { description: Успішна реєстрація, content: { application/json: { schema: { $ref: '#/components/schemas/TokenResponse' } } } }
+        '400': { description: Email або username вже зайняті }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Вхід в систему
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        '200': { description: JWT токени }
+        '401': { description: Невірні облікові дані }
+
+  /books:
+    get:
+      tags: [Books]
+      summary: Список книг з пошуком та фільтрацією
+      parameters:
+        - { name: q, in: query, schema: { type: string }, description: Пошук по назві/автору }
+        - { name: genre, in: query, schema: { $ref: '#/components/schemas/BookGenre' } }
+        - { name: available_only, in: query, schema: { type: boolean } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: page_size, in: query, schema: { type: integer, default: 20 } }
+      responses:
+        '200': { description: Список книг з пагінацією }
+    post:
+      tags: [Books]
+      summary: Додати книгу
+      security: [{ BearerAuth: [] }]
+      responses:
+        '201': { description: Книга створена }
+        '401': { description: Не авторизовано }
+
+  /books/{book_id}:
+    get:
+      tags: [Books]
+      summary: Деталі книги
+      parameters:
+        - { name: book_id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: Деталі книги з рейтингом }
+        '404': { description: Книгу не знайдено }
+
+  /books/{book_id}/reviews:
+    get:
+      tags: [Books]
+      summary: Рецензії до книги
+      parameters:
+        - { name: book_id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: Список рецензій }
+
+  /reviews:
+    post:
+      tags: [Reviews]
+      summary: Написати рецензію
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [book_id, rating]
+              properties:
+                book_id: { type: integer }
+                rating: { type: integer, minimum: 1, maximum: 5 }
+                content: { type: string, maxLength: 2000 }
+      responses:
+        '201': { description: Рецензія створена }
+        '400': { description: Вже є рецензія до цієї книги }
+
+  /exchanges:
+    get:
+      tags: [Exchanges]
+      summary: Список активних пропозицій обміну
+      responses:
+        '200': { description: Список обмінів }
+    post:
+      tags: [Exchanges]
+      summary: Запропонувати обмін
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [offered_book_id, requested_book_id]
+              properties:
+                offered_book_id: { type: integer }
+                requested_book_id: { type: integer }
+                message: { type: string, maxLength: 500 }
+      responses:
+        '201': { description: Обмін створено }
+        '400': { description: Книга недоступна або ваша власна }
+
+  /exchanges/{exchange_id}/accept:
+    patch:
+      tags: [Exchanges]
+      summary: Прийняти обмін (власник книги)
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - { name: exchange_id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: Обмін прийнято }
+        '403': { description: Не ваш обмін }
+
+  /wishlist:
+    get:
+      tags: [Wishlist]
+      summary: Мій список бажань
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200': { description: Список книг у wishlist }
+
+  /wishlist/{book_id}:
+    post:
+      tags: [Wishlist]
+      summary: Додати книгу до wishlist
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - { name: book_id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '201': { description: Додано до wishlist }
+        '400': { description: Вже у wishlist }
+    delete:
+      tags: [Wishlist]
+      summary: Видалити з wishlist
+      security: [{ BearerAuth: [] }]
+      responses:
+        '204': { description: Видалено }
+
+  /recommendations:
+    get:
+      tags: [Recommendations]
+      summary: AI-рекомендації на основі жанрів
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - { name: genres, in: query, schema: { type: string }, description: "Через кому: Фентезі,Детектив" }
+      responses:
+        '200': { description: Список рекомендованих книг від Claude AI }
+
+  /chat/{exchange_id}:
+    get:
+      tags: [Chat]
+      summary: Повідомлення чату для обміну
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - { name: exchange_id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: Список повідомлень }
+    post:
+      tags: [Chat]
+      summary: Надіслати повідомлення
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content: { type: string, minLength: 1, maxLength: 1000 }
+      responses:
+        '201': { description: Повідомлення надіслано }
+
+  /ws/chat/{exchange_id}:
+    get:
+      tags: [WebSocket]
+      summary: WebSocket з'єднання для чату в реальному часі
+      description: |
+        Підключення: `ws://localhost:8000/ws/chat/{exchange_id}?token=<JWT>`
+
+        **Send:** `{"content": "Привіт!"}`
+
+        **Receive:** `{"type": "message", "exchange_id": 1, "sender_id": 2, "content": "Привіт!"}`
+      parameters:
+        - { name: exchange_id, in: path, required: true, schema: { type: integer } }
+        - { name: token, in: query, required: true, schema: { type: string } }
+      responses:
+        '101': { description: WebSocket Upgrade }
+
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              example: { status: ok, version: "1.0.0" }

@@ -1,0 +1,105 @@
+erDiagram
+    USERS {
+        int id PK
+        varchar email UK
+        varchar username UK
+        varchar hashed_password
+        varchar full_name
+        text bio
+        varchar city
+        varchar avatar_url
+        varchar role
+        boolean is_active
+        timestamp created_at
+    }
+
+    BOOKS {
+        int id PK
+        varchar title
+        varchar author
+        text description
+        varchar isbn
+        varchar genre
+        int published_year
+        varchar language
+        varchar condition
+        boolean is_available_for_exchange
+        int owner_id FK
+        timestamp created_at
+    }
+
+    EXCHANGES {
+        int id PK
+        int requester_id FK
+        int owner_id FK
+        int offered_book_id FK
+        int requested_book_id FK
+        varchar status
+        text message
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    MESSAGES {
+        int id PK
+        int exchange_id FK
+        int sender_id FK
+        text content
+        timestamp created_at
+    }
+
+    REVIEWS {
+        int id PK
+        int book_id FK
+        int user_id FK
+        int rating
+        text content
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    FRIENDSHIPS {
+        int id PK
+        int requester_id FK
+        int addressee_id FK
+        varchar status
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    WISHLIST_ITEMS {
+        int id PK
+        int user_id FK
+        int book_id FK
+        timestamp created_at
+    }
+
+    %% Relationships
+    USERS ||--o{ BOOKS : owns
+    USERS ||--o{ REVIEWS : writes
+    USERS ||--o{ WISHLIST_ITEMS : has
+    USERS ||--o{ EXCHANGES : requests
+    USERS ||--o{ EXCHANGES : receives
+    USERS ||--o{ MESSAGES : sends
+    USERS ||--o{ FRIENDSHIPS : participates
+    
+    BOOKS ||--o{ REVIEWS : receives
+    BOOKS ||--o{ EXCHANGES : offered_in
+    BOOKS ||--o{ EXCHANGES : requested_in
+    BOOKS ||--o{ WISHLIST_ITEMS : appears_in
+    
+    EXCHANGES ||--o{ MESSAGES : contains
+    EXCHANGES }o--|| BOOKS : offered_book
+    EXCHANGES }o--|| BOOKS : requested_book
+    EXCHANGES }o--|| USERS : requester
+    EXCHANGES }o--|| USERS : owner
+    
+    MESSAGES }o--|| USERS : sent_by
+    
+    REVIEWS }o--|| USERS : written_by
+    
+    FRIENDSHIPS }o--|| USERS : requester
+    FRIENDSHIPS }o--|| USERS : addressee
+    
+    WISHLIST_ITEMS }o--|| USERS : belongs_to
+    WISHLIST_ITEMS }o--|| BOOKS : references

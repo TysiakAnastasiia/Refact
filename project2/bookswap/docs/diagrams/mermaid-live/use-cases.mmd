@@ -1,0 +1,89 @@
+graph TD
+    subgraph "User Registration"
+        A[User visits registration page] --> B[Fills registration form]
+        B --> C{Validation successful?}
+        C -->|Yes| D[Create user account]
+        C -->|No| E[Show validation errors]
+        E --> B
+        D --> F[Generate JWT tokens]
+        F --> G[Auto-login user]
+        G --> H[Redirect to dashboard]
+    end
+
+    subgraph "Book Search"
+        I[User navigates to books] --> J[Enters search query]
+        J --> K[Filter by criteria]
+        K --> L[Display results]
+        L --> M[User selects book]
+        M --> N[Show book details]
+    end
+
+    subgraph "Exchange Process"
+        O[User finds target book] --> P[Initiates exchange request]
+        P --> Q[Select own book to offer]
+        Q --> R[Add optional message]
+        R --> S[Create exchange record]
+        S --> T[Notify target user]
+        T --> U[Exchange status: pending]
+    end
+
+    subgraph "Exchange Management"
+        V[Target user receives notification] --> W[Views exchange request]
+        W --> X{Decision}
+        X -->|Accept| Y[Update status to accepted]
+        X -->|Reject| Z[Update status to rejected]
+        Y --> AA[Both users notified]
+        Z --> AA
+        AA --> BB[Exchange completed]
+    end
+
+    subgraph "Real-time Chat"
+        CC[Users in accepted exchange] --> DD[Open chat interface]
+        DD --> EE[Send message]
+        EE --> FF[WebSocket delivers message]
+        FF --> GG[Message appears in real-time]
+        GG --> HH[Message stored in database]
+    end
+
+    subgraph "Friend System"
+        II[User searches for other users] --> JJ[Finds interesting profile]
+        JJ --> KK[Clicks 'Add Friend']
+        KK --> LL[Create friendship record]
+        LL --> MM[Users become friends]
+        MM --> NN[Enhanced social features]
+    end
+
+    subgraph "AI Recommendations"
+        OO[User visits recommendations] --> PP[System analyzes reading history]
+        PP --> QQ[Considers favorite genres]
+        QQ --> RR[AI generates suggestions]
+        RR --> SS[Display personalized books]
+        SS --> TT[User can save to wishlist]
+    end
+
+    subgraph "Review System"
+        UU[User reads/exchanges book] -->VV[Navigates to book page]
+        VV --> WW[Clicks 'Write Review']
+        WW --> XX[Rates book 1-5 stars]
+        XX --> YY[Writes review content]
+        YY --> ZZ[Review published]
+        ZZ --> AAA[Book rating updated]
+    end
+
+    subgraph "Wishlist Management"
+        BBB[User finds interesting book] --> CCC[Clicks 'Add to Wishlist']
+        CCC --> DDD[Book added to wishlist]
+        DDD --> EEE[User manages wishlist]
+        EEE --> FFF[Notifications for availability]
+    end
+
+    %% Styling
+    classDef process fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef decision fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef result fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
+    classDef notification fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+
+    class A,B,C,D,E,F,G,H,I,J,K,L,M,N process
+    class C,X decision
+    class D,F,G,L,N,Y,Z,AA,BB,GG,HH,LL,MM,NN,SS,TT,ZZ,AAA,DDD,EEE,FFF result
+    class T,AA notification

@@ -1,0 +1,75 @@
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant Backend
+    participant EventManager
+    participant LoggingObserver
+    participant StatisticsObserver
+    participant WebSocketObserver
+    participant EmailObserver
+    participant Database
+
+    User->>Frontend: Register new account
+    Frontend->>Backend: POST /api/auth/register
+    Backend->>Database: Create user record
+    Database-->>Backend: User created
+    Backend->>EventManager: Emit USER_REGISTERED event
+    EventManager->>LoggingObserver: Log registration
+    LoggingObserver-->>EventManager: Logged
+    EventManager->>StatisticsObserver: Update statistics
+    StatisticsObserver-->>EventManager: Updated
+    EventManager->>WebSocketObserver: No WebSocket clients
+    EventManager->>EmailObserver: Send welcome email
+    EmailObserver-->>EventManager: Email sent
+    Backend-->>Frontend: Registration success
+    Frontend-->>User: Show success message
+
+    User->>Frontend: Create book exchange
+    Frontend->>Backend: POST /api/exchanges
+    Backend->>Database: Create exchange record
+    Database-->>Backend: Exchange created
+    Backend->>EventManager: Emit EXCHANGE_CREATED event
+    EventManager->>LoggingObserver: Log exchange creation
+    EventManager->>StatisticsObserver: Update exchange stats
+    EventManager->>WebSocketObserver: Notify target user
+    WebSocketObserver-->>EventManager: Notification sent
+    Backend-->>Frontend: Exchange created
+    Frontend-->>User: Show exchange status
+
+    User->>Frontend: Send chat message
+    Frontend->>Backend: WebSocket message
+    Backend->>Database: Store message
+    Database-->>Backend: Message stored
+    Backend->>EventManager: Emit MESSAGE_SENT event
+    EventManager->>LoggingObserver: Log message
+    EventManager->>StatisticsObserver: Update message stats
+    EventManager->>WebSocketObserver: Broadcast to participants
+    WebSocketObserver-->>EventManager: Message broadcasted
+    Backend-->>Frontend: Message delivered
+    Frontend-->>User: Show message in chat
+
+    User->>Frontend: Accept exchange
+    Frontend->>Backend: PATCH /api/exchanges/{id}/accept
+    Backend->>Database: Update exchange status
+    Database-->>Backend: Status updated
+    Backend->>EventManager: Emit EXCHANGE_ACCEPTED event
+    EventManager->>LoggingObserver: Log acceptance
+    EventManager->>StatisticsObserver: Update stats
+    EventManager->>WebSocketObserver: Notify requester
+    WebSocketObserver-->>EventManager: Notification sent
+    EventManager->>EmailObserver: Send acceptance email
+    EmailObserver-->>EventManager: Email sent
+    Backend-->>Frontend: Exchange accepted
+    Frontend-->>User: Show updated status
+
+    User->>Frontend: Add friend
+    Frontend->>Backend: POST /api/friends/{user_id}
+    Backend->>Database: Create friendship
+    Database-->>Backend: Friendship created
+    Backend->>EventManager: Emit FRIEND_ADDED event
+    EventManager->>LoggingObserver: Log friendship
+    EventManager->>StatisticsObserver: Update friend stats
+    EventManager->>WebSocketObserver: Notify new friend
+    WebSocketObserver-->>EventManager: Notification sent
+    Backend-->>Frontend: Friend added
+    Frontend-->>User: Show success message

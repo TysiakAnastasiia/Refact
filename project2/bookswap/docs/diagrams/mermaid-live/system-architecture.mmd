@@ -1,0 +1,146 @@
+graph TB
+    subgraph "Frontend Layer"
+        UI[React UI Components]
+        State[State Management<br/>TanStack Query]
+        Client[HTTP Client<br/>Axios]
+        WS[WebSocket Client]
+    end
+
+    subgraph "Backend Layer"
+        subgraph "API Layer"
+            Auth[Auth Router]
+            Users[Users Router]
+            Books[Books Router]
+            Exchanges[Exchanges Router]
+            Chat[Chat Router]
+            Friends[Friends Router]
+            Reviews[Reviews Router]
+            Recs[Recommendations Router]
+        end
+
+        subgraph "Service Layer"
+            AuthService[Auth Service]
+            UserService[User Service]
+            BookService[Book Service]
+            ExchangeService[Exchange Service]
+            ChatService[Chat Service]
+            FriendshipService[Friendship Service]
+            RecommendationService[AI Recommendation Service]
+        end
+
+        subgraph "Repository Layer"
+            UserRepo[User Repository]
+            BookRepo[Book Repository]
+            ExchangeRepo[Exchange Repository]
+            MessageRepo[Message Repository]
+            FriendshipRepo[Friendship Repository]
+            ReviewRepo[Review Repository]
+            WishlistRepo[Wishlist Repository]
+        end
+
+        subgraph "Core Components"
+            Config[Configuration Service<br/>Singleton]
+            Factory[Service Factory<br/>Repository Factory]
+            Events[Event Manager<br/>Observer Pattern]
+            Security[Security Module<br/>JWT Handler]
+        end
+    end
+
+    subgraph "Data Layer"
+        DB[(PostgreSQL Database)]
+        Cache[(Redis Cache<br/>Optional)]
+    end
+
+    subgraph "External Services"
+        Gemini[Google Gemini AI<br/>Recommendations]
+        Email[Email Service<br/>Notifications]
+    end
+
+    %% Connections
+    UI --> State
+    State --> Client
+    Client --> Auth
+    Client --> Users
+    Client --> Books
+    Client --> Exchanges
+    Client --> Chat
+    Client --> Friends
+    Client --> Reviews
+    Client --> Recs
+
+    WS --> Chat
+
+    Auth --> AuthService
+    Users --> UserService
+    Books --> BookService
+    Exchanges --> ExchangeService
+    Chat --> ChatService
+    Friends --> FriendshipService
+    Reviews --> ReviewService
+    Recs --> RecommendationService
+
+    AuthService --> UserRepo
+    UserService --> UserRepo
+    BookService --> BookRepo
+    ExchangeService --> ExchangeRepo
+    ChatService --> MessageRepo
+    ChatService --> ExchangeRepo
+    FriendshipService --> FriendshipRepo
+    ReviewService --> ReviewRepo
+    BookService --> WishlistRepo
+
+    UserRepo --> DB
+    BookRepo --> DB
+    ExchangeRepo --> DB
+    MessageRepo --> DB
+    FriendshipRepo --> DB
+    ReviewRepo --> DB
+    WishlistRepo --> DB
+
+    AuthService --> Security
+    UserService --> Security
+    BookService --> Security
+    ExchangeService --> Security
+    ChatService --> Security
+    FriendshipService --> Security
+    ReviewService --> Security
+
+    Config --> AuthService
+    Config --> UserService
+    Config --> BookService
+    Config --> ExchangeService
+    Config --> ChatService
+    Config --> FriendshipService
+    Config --> ReviewService
+
+    Factory --> AuthService
+    Factory --> UserService
+    Factory --> BookService
+    Factory --> ExchangeService
+    Factory --> ChatService
+    Factory --> FriendshipService
+    Factory --> ReviewService
+
+    Events --> AuthService
+    Events --> UserService
+    Events --> BookService
+    Events --> ExchangeService
+    Events --> ChatService
+    Events --> FriendshipService
+    Events --> ReviewService
+
+    RecommendationService --> Gemini
+    Events --> Email
+
+    %% Styling
+    classDef frontend fill:#e1f5fe
+    classDef backend fill:#f3e5f5
+    classDef data fill:#e8f5e8
+    classDef external fill:#fff3e0
+    classDef core fill:#fce4ec
+
+    class UI,State,Client,WS frontend
+    class Auth,Users,Books,Exchanges,Chat,Friends,Reviews,Recs,AuthService,UserService,BookService,ExchangeService,ChatService,FriendshipService,RecommendationService,UserRepo,BookRepo,ExchangeRepo,MessageRepo,FriendshipRepo,ReviewRepo,WishlistRepo backend
+    class DB,Cache data
+    class Gemini,Email external
+    class Config,Factory,Events,Security core
