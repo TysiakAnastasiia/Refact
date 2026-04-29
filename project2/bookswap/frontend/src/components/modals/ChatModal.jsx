@@ -33,17 +33,6 @@ export default function ChatModal({ exchange, onClose }) {
     scrollToBottom();
   }, [messages]);
 
-    try {
-      setIsLoading(true);
-      const response = await chatApi.getMessages(exchange.id);
-      setMessages(response.data);
-    } catch (error) {
-      console.error("Error loading messages:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };

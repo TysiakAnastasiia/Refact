@@ -1,11 +1,10 @@
 // WishlistPage.jsx
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { wishlistApi } from "../api/client";
 import BookCard from "../components/books/BookCard";
 import styles from "./WishlistPage.module.css";
 
 export default function WishlistPage() {
-  const queryClient = useQueryClient();
   const { data: items = [], isLoading } = useQuery({
     queryKey: ["wishlist"],
     queryFn: () => wishlistApi.get().then((r) => r.data),

@@ -5,6 +5,15 @@ import { describe, expect, it, vi } from "vitest";
 
 //  Test helpers
 
+function QueryClientWrapper({ children }) {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return (
+    <QueryClientProvider client={qc}>
+      <MemoryRouter>{children}</MemoryRouter>
+    </QueryClientProvider>
+  );
+}
+
 const makeWrapper =
   (queryClient) =>
   ({ children }) => (

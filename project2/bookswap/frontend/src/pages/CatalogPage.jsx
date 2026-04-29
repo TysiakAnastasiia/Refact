@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { RefreshCw, Search } from "lucide-react";
 import { useState } from "react";
 import { booksApi } from "../api/client";
@@ -26,7 +26,6 @@ const GENRES = [
 
 export default function CatalogPage() {
   const { user } = useAuthStore();
-  const queryClient = useQueryClient();
 
   const [search, setSearch] = useState("");
   const [genre, setGenre] = useState("");
@@ -36,13 +35,6 @@ export default function CatalogPage() {
   const [showExchangeModal, setShowExchangeModal] = useState(false);
   const [selectedBookForExchange, setSelectedBookForExchange] = useState(null);
   const [debouncedSearch, setDebouncedSearch] = useState("");
-
-  // Отримуємо книги користувача для пропозиції обміну
-  const { data: userBooks = [] } = useQuery({
-    queryKey: ["user-books", user?.id],
-    queryFn: () => booksApi.list({ owner_id: user.id }).then((r) => r.data),
-    enabled: !!user,
-  });
 
   const handleExchangeRequest = (book) => {
     console.log("handleExchangeRequest called with book:", book);
