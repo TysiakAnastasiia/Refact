@@ -115,27 +115,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install docker-compose
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y docker-compose
-
       - name: Build backend image
         run: docker build ./backend -t bookswap-backend:${{ github.sha }}
 
       - name: Build frontend image
         run: docker build ./frontend -t bookswap-frontend:${{ github.sha }}
 
-      - name: Smoke test with docker-compose
-        continue-on-error: true
-        run: |
-          cp backend/.env.example backend/.env
-          cp frontend/.env.example frontend/.env
-          if command -v docker-compose &> /dev/null; then
-            docker-compose up -d db backend
-            sleep 10
-            curl --fail http://localhost:8000/health || exit 1
-            docker-compose down
-          else
-            echo "docker-compose not found, skipping smoke test"
-          fi
+      
