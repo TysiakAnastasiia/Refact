@@ -189,12 +189,12 @@ jobs:
       - name: Build frontend image
         run: docker build project2/bookswap/frontend -t bookswap-frontend:${{ github.sha }}
 
-      - name: Smoke test with docker-compose
+      - name: Smoke test with docker compose
         working-directory: project2/bookswap
         run: |
           cp backend/.env.example backend/.env
           cp frontend/.env.example frontend/.env
-          docker-compose up -d db backend
+          docker compose up -d db backend
           sleep 10
           curl --fail http://localhost:8000/health || exit 1
-          docker-compose down
+          docker compose down
