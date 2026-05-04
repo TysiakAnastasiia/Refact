@@ -33,16 +33,6 @@ SAMPLE_USERS = [
 
 SAMPLE_BOOKS = [
     {
-        "title": "Майстер і Маргарита",
-        "author": "Михайло Булгаков",
-        "genre": BookGenre.fiction,
-        "condition": BookCondition.good,
-        "description": "Один з найвидатніших романів XX століття, де переплітаються сатира, містика та філософія.",
-        "published_year": 1967,
-        "language": "Ukrainian",
-        "is_available_for_exchange": True,
-    },
-    {
         "title": "Гаррі Поттер і філософський камінь",
         "author": "Джоан Роулінг",
         "genre": BookGenre.fantasy,
