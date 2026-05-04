@@ -338,7 +338,7 @@ class TestAPIIntegration:
 
     def test_api_error_handling(self):
         """Test API error handling."""
-        client = TestClient(test_app)
+        client = TestClient(app)
 
         # Test non-existent endpoint
         response = client.get("/non-existent-endpoint")
