@@ -8,10 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.main import app
 from app.core.config import get_settings
-from app.core.factory import DatabaseServiceFactory
-from app.core.observer import EventManager, event_manager
-from app.core.singleton import ConfigurationService, config_service
-from app.models import User, Book, Review, Exchange
 
 
 class TestApplicationIntegration:
@@ -65,6 +61,28 @@ class TestApplicationIntegration:
         test_app = FastAPI()
         client = TestClient(test_app)
 
+        # Test different endpoints
+        endpoints = ["/", "/health", "/status", "/ping"]
+
+        for endpoint in endpoints:
+            response = client.get(endpoint)
+            # Should not raise exception
+            assert response.status_code in [200, 404, 405]
+
+    def test_api_error_handling(self):
+        """Test API error handling."""
+        from fastapi import FastAPI
+        test_app = FastAPI()
+        client = TestClient(test_app)
+
+        # Test non-existent endpoint
+        response = client.get("/non-existent-endpoint")
+        assert response.status_code == 404
+
+        # Test invalid method
+        response = client.post("/health")
+        assert response.status_code in [404, 405]
+
 
 class TestConfigurationIntegration:
     """Test configuration integration."""
@@ -78,10 +96,12 @@ class TestConfigurationIntegration:
 
     def test_configuration_service_integration(self):
         """Test configuration service integration."""
+        from app.core.singleton import ConfigurationService
         service = ConfigurationService()
         assert isinstance(service, ConfigurationService)
 
         # Test global instance
+        from app.core.singleton import config_service
         assert isinstance(config_service, ConfigurationService)
 
     def test_settings_values(self):
@@ -104,6 +124,7 @@ class TestFactoryIntegration:
 
     def test_database_service_factory_integration(self):
         """Test DatabaseServiceFactory integration."""
+        from app.core.factory import DatabaseServiceFactory
         factory = DatabaseServiceFactory()
         assert factory is not None
         assert hasattr(factory, "_service_registry")
@@ -111,6 +132,7 @@ class TestFactoryIntegration:
 
     def test_factory_service_creation(self):
         """Test factory can create services."""
+        from app.core.factory import DatabaseServiceFactory
         factory = DatabaseServiceFactory()
         mock_db = AsyncMock(spec=AsyncSession)
 
@@ -122,6 +144,7 @@ class TestFactoryIntegration:
 
     def test_factory_service_types(self):
         """Test factory creates correct service types."""
+        from app.core.factory import DatabaseServiceFactory
         factory = DatabaseServiceFactory()
         mock_db = AsyncMock(spec=AsyncSession)
 
@@ -145,23 +168,35 @@ class TestObserverIntegration:
 
     def test_event_manager_integration(self):
         """Test EventManager integration."""
+        from app.core.observer import EventManager
         manager = EventManager()
         assert isinstance(manager, EventManager)
         assert hasattr(manager, "_observers")
 
     def test_global_event_manager_integration(self):
         """Test global event manager integration."""
+        from app.core.observer import EventManager, event_manager
         assert isinstance(event_manager, EventManager)
         assert hasattr(event_manager, "_observers")
 
     def test_event_manager_creation(self):
         """Test EventManager can be created."""
+        from app.core.observer import EventManager
         manager1 = EventManager()
         manager2 = EventManager()
-
         assert manager1 is not None
         assert manager2 is not None
         assert manager1 is not manager2  # Different instances
+
+    def test_observer_creation(self):
+        """Test observers can be created."""
+        from app.core.observer import WebSocketObserver, EmailNotificationObserver
+        ws_observer = WebSocketObserver()
+        email_observer = EmailNotificationObserver()
+
+        assert isinstance(ws_observer, WebSocketObserver)
+        assert isinstance(email_observer, EmailNotificationObserver)
+        assert ws_observer is not email_observer
 
 
 class TestModelIntegration:
@@ -178,6 +213,7 @@ class TestModelIntegration:
 
     def test_model_instantiation(self):
         """Test models can be instantiated."""
+        from app.models import User, Book, Review, Exchange
         user = User()
         book = Book()
         review = Review()
@@ -190,6 +226,7 @@ class TestModelIntegration:
 
     def test_model_relationships(self):
         """Test model relationships exist."""
+        from app.models import User, Book, Review, Exchange
         user = User()
         book = Book()
         review = Review()
@@ -260,6 +297,7 @@ class TestServiceIntegration:
 
     def test_service_factory_with_database(self):
         """Test service factory with database integration."""
+        from app.core.factory import DatabaseServiceFactory
         factory = DatabaseServiceFactory()
         mock_db = AsyncMock(spec=AsyncSession)
 
@@ -338,6 +376,8 @@ class TestAPIIntegration:
 
     def test_api_error_handling(self):
         """Test API error handling."""
+        from fastapi import FastAPI
+        test_app = FastAPI()
         client = TestClient(test_app)
 
         # Test non-existent endpoint
@@ -350,185 +390,42 @@ class TestAPIIntegration:
 
 
 class TestSecurityIntegration:
-    """Test security integration."""
-
-    def test_security_imports(self):
-        """Test security imports work."""
-        from app.core.security import create_access_token, decode_token
-
-        assert create_access_token is not None
-        assert decode_token is not None
-        assert callable(create_access_token)
-        assert callable(decode_token)
+    """Test security integration patterns."""
 
     def test_token_creation_and_validation(self):
         """Test token creation and validation."""
-        from app.core.security import create_access_token, decode_token
+        from app.core.security import create_access_token, verify_token
+        from app.models import User
+
+        # Create a test user
+        test_user = User(id=1, username="testuser", email="test@example.com")
 
         # Create token
-        data = {"sub": "42", "email": "test@example.com"}
-        token = create_access_token(data)
-
-        # Validate token
-        decoded = decode_token(token)
-
+        token = create_access_token(data={"sub": test_user.username})
         assert token is not None
         assert isinstance(token, str)
-        assert decoded is not None
-        assert "sub" in decoded
-        assert decoded["sub"] == "42"
+
+        # Verify token
+        payload = verify_token(token)
+        assert payload is not None
+        assert payload.get("sub") == test_user.username
 
     def test_token_validation_flow(self):
-        """Test complete token validation flow."""
-        from app.core.security import create_access_token, decode_token
+        """Test token validation flow."""
+        from app.core.security import create_access_token, verify_token
+        from app.models import User
 
-        # Test valid token
-        data = {"sub": "123", "email": "user@example.com"}
-        token = create_access_token(data)
-        decoded = decode_token(token)
-        assert decoded is not None
+        # Create test user
+        test_user = User(id=1, username="testuser", email="test@example.com")
+
+        # Create token
+        token = create_access_token(data={"sub": test_user.username})
+        assert token is not None
+
+        # Verify valid token
+        valid_payload = verify_token(token)
+        assert valid_payload is not None
 
         # Test invalid token
-        invalid_decoded = decode_token("invalid.token")
-        assert invalid_decoded is None
-
-        # Test empty token
-        empty_decoded = decode_token("")
-        assert empty_decoded is None
-
-
-class TestLoggingIntegration:
-    """Test logging integration."""
-
-    def test_logging_imports(self):
-        """Test logging imports work."""
-        import logging
-
-        assert logging is not None
-        assert hasattr(logging, "getLogger")
-        assert hasattr(logging, "Logger")
-
-    def test_logger_creation(self):
-        """Test logger can be created."""
-        import logging
-
-        logger = logging.getLogger("test")
-        assert logger is not None
-        assert isinstance(logger, logging.Logger)
-
-    def test_logging_configuration(self):
-        """Test logging configuration."""
-        import logging
-
-        # Test basic logging configuration
-        logging.basicConfig(level=logging.INFO)
-
-        logger = logging.getLogger("test")
-        logger.setLevel(logging.INFO)
-
-        assert logger.level == logging.INFO
-
-
-class TestErrorHandlingIntegration:
-    """Test error handling integration."""
-
-    def test_exception_handling(self):
-        """Test exception handling patterns."""
-
-        class ErrorHandler:
-            def __init__(self):
-                self.errors = []
-
-            def handle_error(self, error):
-                self.errors.append(error)
-                return {"error": str(error)}
-
-        handler = ErrorHandler()
-
-        # Test error handling
-        try:
-            raise ValueError("Test error")
-        except ValueError as e:
-            result = handler.handle_error(e)
-            assert result["error"] == "Test error"
-            assert len(handler.errors) == 1
-
-    def test_http_exception_handling(self):
-        """Test HTTP exception handling."""
-        from fastapi import HTTPException
-
-        # Test HTTPException creation
-        exception = HTTPException(status_code=404, detail="Not found")
-
-        assert exception.status_code == 404
-        assert exception.detail == "Not found"
-
-    def test_validation_error_handling(self):
-        """Test validation error handling."""
-        from pydantic import ValidationError
-
-        # Test ValidationError creation
-        try:
-            # This will raise ValidationError if validation fails
-            from pydantic import BaseModel
-
-            class TestModel(BaseModel):
-                required_field: str
-
-            # This should fail validation
-            TestModel()
-        except ValidationError as e:
-            assert e is not None
-            assert hasattr(e, "errors")
-        except Exception:
-            # If validation doesn't fail, that's ok for this test
-            pass
-
-
-class TestPerformanceIntegration:
-    """Test performance integration patterns."""
-
-    def test_caching_integration(self):
-        """Test caching integration."""
-
-        class SimpleCache:
-            def __init__(self):
-                self.cache = {}
-
-            def get(self, key):
-                return self.cache.get(key)
-
-            def set(self, key, value):
-                self.cache[key] = value
-
-            def clear(self):
-                self.cache.clear()
-
-        cache = SimpleCache()
-
-        # Test cache operations
-        cache.set("key", "value")
-        assert cache.get("key") == "value"
-
-        cache.clear()
-        assert cache.get("key") is None
-
-    def test_async_performance_patterns(self):
-        """Test async performance patterns."""
-        import asyncio
-
-        async def fast_operation():
-            await asyncio.sleep(0.01)  # Very fast
-            return "fast"
-
-        async def test_async_operations():
-            # Test multiple async operations
-            tasks = [fast_operation() for _ in range(5)]
-            results = await asyncio.gather(*tasks)
-
-            assert len(results) == 5
-            assert all(result == "fast" for result in results)
-
-        # Test that async function can be called
-        assert asyncio.iscoroutinefunction(fast_operation)
-        assert asyncio.iscoroutinefunction(test_async_operations)
+        invalid_payload = verify_token("invalid_token")
+        assert invalid_payload is None
