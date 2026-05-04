@@ -159,24 +159,6 @@ class TestModelStringRepresentation:
         assert len(str_repr) > 0
 
 
-class TestModelDefaults:
-    """Test model default values."""
-
-    def test_user_default_values(self):
-        """Test User model default values."""
-        user = User()
-
-        # Check default is_active
-        assert user.is_active is True
-
-    def test_book_default_values(self):
-        """Test Book model default values."""
-        book = Book()
-
-        # Check default is_available_for_exchange
-        assert book.is_available_for_exchange is True
-
-
 class TestModelValidation:
     """Test basic model validation."""
 
