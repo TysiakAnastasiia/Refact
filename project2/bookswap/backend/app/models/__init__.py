@@ -3,22 +3,33 @@ from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import (
-    Boolean, DateTime, Enum, Float, ForeignKey,
-    Integer, String, Text, func,
+    Boolean,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
 
 
-#  User 
+#  User
+
 
 class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
-    username: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False)
+    email: Mapped[str] = mapped_column(
+        String(255), unique=True, index=True, nullable=False
+    )
+    username: Mapped[str] = mapped_column(
+        String(100), unique=True, index=True, nullable=False
+    )
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[Optional[str]] = mapped_column(String(200))
     bio: Mapped[Optional[str]] = mapped_column(Text)
@@ -27,15 +38,28 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
-    books: Mapped[list["Book"]] = relationship("Book", back_populates="owner", cascade="all, delete-orphan")
-    reviews: Mapped[list["Review"]] = relationship("Review", back_populates="user", cascade="all, delete-orphan")
-    wishlist_items: Mapped[list["WishlistItem"]] = relationship("WishlistItem", back_populates="user", cascade="all, delete-orphan")
-    sent_exchanges: Mapped[list["Exchange"]] = relationship("Exchange", foreign_keys="Exchange.requester_id", back_populates="requester")
-    received_exchanges: Mapped[list["Exchange"]] = relationship("Exchange", foreign_keys="Exchange.owner_id", back_populates="owner")
-    sent_messages: Mapped[list["Message"]] = relationship("Message", back_populates="sender")
+    books: Mapped[list["Book"]] = relationship(
+        "Book", back_populates="owner", cascade="all, delete-orphan"
+    )
+    reviews: Mapped[list["Review"]] = relationship(
+        "Review", back_populates="user", cascade="all, delete-orphan"
+    )
+    wishlist_items: Mapped[list["WishlistItem"]] = relationship(
+        "WishlistItem", back_populates="user", cascade="all, delete-orphan"
+    )
+    sent_exchanges: Mapped[list["Exchange"]] = relationship(
+        "Exchange", foreign_keys="Exchange.requester_id", back_populates="requester"
+    )
+    received_exchanges: Mapped[list["Exchange"]] = relationship(
+        "Exchange", foreign_keys="Exchange.owner_id", back_populates="owner"
+    )
+    sent_messages: Mapped[list["Message"]] = relationship(
+        "Message", back_populates="sender"
+    )
 
 
-#  Book 
+#  Book
+
 
 class BookGenre(str, enum.Enum):
     fiction = "fiction"
@@ -74,19 +98,34 @@ class Book(Base):
     genre: Mapped[BookGenre] = mapped_column(Enum(BookGenre), nullable=False)
     published_year: Mapped[Optional[int]] = mapped_column(Integer)
     language: Mapped[str] = mapped_column(String(50), default="Ukrainian")
-    condition: Mapped[BookCondition] = mapped_column(Enum(BookCondition), default=BookCondition.good)
+    condition: Mapped[BookCondition] = mapped_column(
+        Enum(BookCondition), default=BookCondition.good
+    )
     is_available_for_exchange: Mapped[bool] = mapped_column(Boolean, default=True)
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     owner: Mapped["User"] = relationship("User", back_populates="books")
-    reviews: Mapped[list["Review"]] = relationship("Review", back_populates="book", cascade="all, delete-orphan")
-    wishlist_items: Mapped[list["WishlistItem"]] = relationship("WishlistItem", back_populates="book")
-    exchange_offers: Mapped[list["Exchange"]] = relationship("Exchange", foreign_keys="Exchange.offered_book_id", back_populates="offered_book")
-    exchange_requests: Mapped[list["Exchange"]] = relationship("Exchange", foreign_keys="Exchange.requested_book_id", back_populates="requested_book")
+    reviews: Mapped[list["Review"]] = relationship(
+        "Review", back_populates="book", cascade="all, delete-orphan"
+    )
+    wishlist_items: Mapped[list["WishlistItem"]] = relationship(
+        "WishlistItem", back_populates="book"
+    )
+    exchange_offers: Mapped[list["Exchange"]] = relationship(
+        "Exchange",
+        foreign_keys="Exchange.offered_book_id",
+        back_populates="offered_book",
+    )
+    exchange_requests: Mapped[list["Exchange"]] = relationship(
+        "Exchange",
+        foreign_keys="Exchange.requested_book_id",
+        back_populates="requested_book",
+    )
 
 
-#  Review 
+#  Review
+
 
 class Review(Base):
     __tablename__ = "reviews"
@@ -97,13 +136,16 @@ class Review(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     book_id: Mapped[int] = mapped_column(ForeignKey("books.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
-    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, onupdate=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, onupdate=func.now()
+    )
 
     user: Mapped["User"] = relationship("User", back_populates="reviews")
     book: Mapped["Book"] = relationship("Book", back_populates="reviews")
 
 
-#  Exchange 
+#  Exchange
+
 
 class ExchangeStatus(str, enum.Enum):
     pending = "pending"
@@ -120,20 +162,37 @@ class Exchange(Base):
     requester_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     offered_book_id: Mapped[int] = mapped_column(ForeignKey("books.id"), nullable=False)
-    requested_book_id: Mapped[int] = mapped_column(ForeignKey("books.id"), nullable=False)
-    status: Mapped[ExchangeStatus] = mapped_column(Enum(ExchangeStatus), default=ExchangeStatus.pending)
+    requested_book_id: Mapped[int] = mapped_column(
+        ForeignKey("books.id"), nullable=False
+    )
+    status: Mapped[ExchangeStatus] = mapped_column(
+        Enum(ExchangeStatus), default=ExchangeStatus.pending
+    )
     message: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
-    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, onupdate=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, onupdate=func.now()
+    )
 
-    requester: Mapped["User"] = relationship("User", foreign_keys=[requester_id], back_populates="sent_exchanges")
-    owner: Mapped["User"] = relationship("User", foreign_keys=[owner_id], back_populates="received_exchanges")
-    offered_book: Mapped["Book"] = relationship("Book", foreign_keys=[offered_book_id], back_populates="exchange_offers")
-    requested_book: Mapped["Book"] = relationship("Book", foreign_keys=[requested_book_id], back_populates="exchange_requests")
-    messages: Mapped[list["Message"]] = relationship("Message", back_populates="exchange")
+    requester: Mapped["User"] = relationship(
+        "User", foreign_keys=[requester_id], back_populates="sent_exchanges"
+    )
+    owner: Mapped["User"] = relationship(
+        "User", foreign_keys=[owner_id], back_populates="received_exchanges"
+    )
+    offered_book: Mapped["Book"] = relationship(
+        "Book", foreign_keys=[offered_book_id], back_populates="exchange_offers"
+    )
+    requested_book: Mapped["Book"] = relationship(
+        "Book", foreign_keys=[requested_book_id], back_populates="exchange_requests"
+    )
+    messages: Mapped[list["Message"]] = relationship(
+        "Message", back_populates="exchange"
+    )
 
 
-#  Wishlist 
+#  Wishlist
+
 
 class WishlistItem(Base):
     __tablename__ = "wishlist_items"
@@ -147,7 +206,8 @@ class WishlistItem(Base):
     book: Mapped["Book"] = relationship("Book", back_populates="wishlist_items")
 
 
-#  Message 
+#  Message
+
 
 class Message(Base):
     __tablename__ = "messages"
@@ -163,7 +223,8 @@ class Message(Base):
     sender: Mapped["User"] = relationship("User", back_populates="sent_messages")
 
 
-#  Friendship 
+#  Friendship
+
 
 class Friendship(Base):
     __tablename__ = "friendships"
@@ -171,9 +232,13 @@ class Friendship(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     requester_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     addressee_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
-    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending, accepted, rejected
+    status: Mapped[str] = mapped_column(
+        String(20), default="pending"
+    )  # pending, accepted, rejected
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
-    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, onupdate=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, onupdate=func.now()
+    )
 
     requester: Mapped["User"] = relationship("User", foreign_keys=[requester_id])
     addressee: Mapped["User"] = relationship("User", foreign_keys=[addressee_id])

@@ -13,9 +13,7 @@ class BookRepository(BaseRepository[Book]):
 
     async def get_with_owner(self, book_id: int) -> Optional[Book]:
         result = await self.db.execute(
-            select(Book)
-            .options(selectinload(Book.owner))
-            .where(Book.id == book_id)
+            select(Book).options(selectinload(Book.owner)).where(Book.id == book_id)
         )
         return result.scalar_one_or_none()
 
@@ -40,7 +38,7 @@ class BookRepository(BaseRepository[Book]):
         if genre:
             filters.append(Book.genre == genre)
         if available_only:
-            filters.append(Book.is_available_for_exchange == True)
+            filters.append(Book.is_available_for_exchange)
         if owner_id:
             filters.append(Book.owner_id == owner_id)
 

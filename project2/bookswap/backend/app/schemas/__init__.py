@@ -5,7 +5,8 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 from app.models import BookGenre, BookCondition, ExchangeStatus
 
 
-#  Auth 
+#  Auth
+
 
 class UserRegister(BaseModel):
     email: EmailStr
@@ -25,7 +26,8 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 
-#  User 
+#  User
+
 
 class UserBase(BaseModel):
     id: int
@@ -60,7 +62,8 @@ class UserPublic(BaseModel):
         from_attributes = True
 
 
-#  Book 
+#  Book
+
 
 class BookCreate(BaseModel):
     title: str = Field(min_length=1, max_length=300)
@@ -120,7 +123,8 @@ class BookListResponse(BaseModel):
     pages: int
 
 
-#  Review 
+#  Review
+
 
 class ReviewCreate(BaseModel):
     book_id: int
@@ -146,7 +150,8 @@ class ReviewResponse(BaseModel):
         from_attributes = True
 
 
-#  Exchange 
+#  Exchange
+
 
 class ExchangeCreate(BaseModel):
     offered_book_id: Optional[int] = None
@@ -169,7 +174,8 @@ class ExchangeResponse(BaseModel):
         from_attributes = True
 
 
-#  Wishlist 
+#  Wishlist
+
 
 class WishlistItemResponse(BaseModel):
     id: int
@@ -180,7 +186,8 @@ class WishlistItemResponse(BaseModel):
         from_attributes = True
 
 
-#  Chat 
+#  Chat
+
 
 class MessageCreate(BaseModel):
     content: str = Field(min_length=1, max_length=1000)
@@ -198,7 +205,8 @@ class MessageResponse(BaseModel):
         from_attributes = True
 
 
-#  Recommendations 
+#  Recommendations
+
 
 class RecommendationResponse(BaseModel):
     title: str

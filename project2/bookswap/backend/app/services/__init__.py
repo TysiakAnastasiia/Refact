@@ -2,11 +2,17 @@
 Service layer — business logic separated from HTTP concerns.
 Each service depends on repositories injected via constructor (Dependency Injection).
 """
-from typing import Optional, Sequence
-from fastapi import HTTPException, status
+
+from typing import Sequence
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import verify_password, get_password_hash, create_access_token, create_refresh_token
+from app.core.security import (
+    verify_password,
+    get_password_hash,
+    create_access_token,
+    create_refresh_token,
+)
 from app.models import (
     User,
     Book,
@@ -19,17 +25,28 @@ from app.models import (
 )
 from app.repositories.book import BookRepository
 from app.repositories import (
-    UserRepository, ReviewRepository, ExchangeRepository,
-    WishlistRepository, MessageRepository, FriendshipRepository,
+    UserRepository,
+    ReviewRepository,
+    ExchangeRepository,
+    WishlistRepository,
+    MessageRepository,
+    FriendshipRepository,
 )
 from app.core.observer import event_manager, Event, EventType
 from app.schemas import (
-    UserRegister, UserUpdate, BookCreate, BookUpdate,
-    ReviewCreate, ReviewUpdate, ExchangeCreate, MessageCreate,
+    UserRegister,
+    UserUpdate,
+    BookCreate,
+    BookUpdate,
+    ReviewCreate,
+    ReviewUpdate,
+    ExchangeCreate,
+    MessageCreate,
 )
 
 
 # ─── Auth Service ─────────────────────────────────────────────────────────────
+
 
 class AuthService:
     def __init__(self, db: AsyncSession):
@@ -40,7 +57,7 @@ class AuthService:
         existing_user = await self.user_repo.get_by_email(user_data.email)
         if existing_user:
             raise HTTPException(status_code=400, detail="Email already registered")
-        
+
         existing_username = await self.user_repo.get_by_username(user_data.username)
         if existing_username:
             raise HTTPException(status_code=400, detail="Username already taken")
@@ -57,15 +74,17 @@ class AuthService:
         created_user = await self.user_repo.create(user)
 
         # Emit user registration event
-        await event_manager.notify(Event(
-            EventType.USER_REGISTERED,
-            {
-                'user_id': created_user.id,
-                'username': created_user.username,
-                'email': created_user.email,
-                'full_name': created_user.full_name
-            }
-        ))
+        await event_manager.notify(
+            Event(
+                EventType.USER_REGISTERED,
+                {
+                    "user_id": created_user.id,
+                    "username": created_user.username,
+                    "email": created_user.email,
+                    "full_name": created_user.full_name,
+                },
+            )
+        )
 
         # Generate tokens
         access_token = create_access_token(created_user.id)
@@ -96,6 +115,7 @@ class AuthService:
 
 # ─── User Service ─────────────────────────────────────────────────────────────
 
+
 class UserService:
     def __init__(self, db: AsyncSession):
         self.user_repo = UserRepository(db)
@@ -113,6 +133,7 @@ class UserService:
 
 
 # ─── Book Service ─────────────────────────────────────────────────────────────
+
 
 class BookService:
     def __init__(self, db: AsyncSession):
@@ -142,9 +163,19 @@ class BookService:
             raise HTTPException(status_code=403, detail="Not your book")
         await self.book_repo.delete(book)
 
-    async def search_books(self, query=None, genre=None, available_only=False, owner_id=None, page=1, page_size=20):
+    async def search_books(
+        self,
+        query=None,
+        genre=None,
+        available_only=False,
+        owner_id=None,
+        page=1,
+        page_size=20,
+    ):
         skip = (page - 1) * page_size
-        books, total = await self.book_repo.search(query, genre, available_only, owner_id, skip, page_size)
+        books, total = await self.book_repo.search(
+            query, genre, available_only, owner_id, skip, page_size
+        )
 
         # Enrich with ratings
         enriched = []
@@ -160,22 +191,29 @@ class BookService:
 
 # ─── Review Service ───────────────────────────────────────────────────────────
 
+
 class ReviewService:
     def __init__(self, db: AsyncSession):
         self.review_repo = ReviewRepository(db)
         self.book_repo = BookRepository(db)
 
     async def create_review(self, data: ReviewCreate, user_id: int) -> Review:
-        existing = await self.review_repo.get_user_review_for_book(user_id, data.book_id)
+        existing = await self.review_repo.get_user_review_for_book(
+            user_id, data.book_id
+        )
         if existing:
-            raise HTTPException(status_code=400, detail="You already reviewed this book")
+            raise HTTPException(
+                status_code=400, detail="You already reviewed this book"
+            )
         book = await self.book_repo.get(data.book_id)
         if not book:
             raise HTTPException(status_code=404, detail="Book not found")
         review = Review(**data.model_dump(), user_id=user_id)
         return await self.review_repo.create(review)
 
-    async def update_review(self, review_id: int, data: ReviewUpdate, user_id: int) -> Review:
+    async def update_review(
+        self, review_id: int, data: ReviewUpdate, user_id: int
+    ) -> Review:
         review = await self.review_repo.get(review_id)
         if not review:
             raise HTTPException(status_code=404, detail="Review not found")
@@ -191,23 +229,30 @@ class ReviewService:
             raise HTTPException(status_code=403, detail="Not allowed")
         await self.review_repo.delete(review)
 
-    async def get_book_reviews(self, book_id: int, skip=0, limit=20) -> Sequence[Review]:
+    async def get_book_reviews(
+        self, book_id: int, skip=0, limit=20
+    ) -> Sequence[Review]:
         return await self.review_repo.get_by_book(book_id, skip, limit)
 
 
 # ─── Exchange Service ─────────────────────────────────────────────────────────
+
 
 class ExchangeService:
     def __init__(self, db: AsyncSession):
         self.exchange_repo = ExchangeRepository(db)
         self.book_repo = BookRepository(db)
 
-    async def create_exchange(self, data: ExchangeCreate, requester_id: int) -> Exchange:
+    async def create_exchange(
+        self, data: ExchangeCreate, requester_id: int
+    ) -> Exchange:
         requested_book = await self.book_repo.get(data.requested_book_id)
         if not requested_book:
             raise HTTPException(status_code=404, detail="Requested book not found")
         if not requested_book.is_available_for_exchange:
-            raise HTTPException(status_code=400, detail="Book not available for exchange")
+            raise HTTPException(
+                status_code=400, detail="Book not available for exchange"
+            )
         if requested_book.owner_id == requester_id:
             raise HTTPException(status_code=400, detail="Cannot request your own book")
 
@@ -215,7 +260,9 @@ class ExchangeService:
         if data.offered_book_id:
             offered_book = await self.book_repo.get(data.offered_book_id)
             if not offered_book or offered_book.owner_id != requester_id:
-                raise HTTPException(status_code=403, detail="Offered book must be yours")
+                raise HTTPException(
+                    status_code=403, detail="Offered book must be yours"
+                )
 
         exchange = Exchange(
             requester_id=requester_id,
@@ -225,24 +272,28 @@ class ExchangeService:
             message=data.message,
         )
         created_exchange = await self.exchange_repo.create(exchange)
-        
+
         # Emit exchange creation event
-        await event_manager.notify(Event(
-            EventType.EXCHANGE_CREATED,
-            {
-                'exchange_id': created_exchange.id,
-                'requester_id': created_exchange.requester_id,
-                'owner_id': created_exchange.owner_id,
-                'offered_book_id': created_exchange.offered_book_id,
-                'requested_book_id': created_exchange.requested_book_id,
-                'status': created_exchange.status.value
-            }
-        ))
-        
+        await event_manager.notify(
+            Event(
+                EventType.EXCHANGE_CREATED,
+                {
+                    "exchange_id": created_exchange.id,
+                    "requester_id": created_exchange.requester_id,
+                    "owner_id": created_exchange.owner_id,
+                    "offered_book_id": created_exchange.offered_book_id,
+                    "requested_book_id": created_exchange.requested_book_id,
+                    "status": created_exchange.status.value,
+                },
+            )
+        )
+
         # Load relationships for response schema
         return await self.exchange_repo.get_with_details(created_exchange.id)
 
-    async def update_status(self, exchange_id: int, new_status: ExchangeStatus, user_id: int) -> Exchange:
+    async def update_status(
+        self, exchange_id: int, new_status: ExchangeStatus, user_id: int
+    ) -> Exchange:
         exchange = await self.exchange_repo.get(exchange_id)
         if not exchange:
             raise HTTPException(status_code=404, detail="Exchange not found")
@@ -250,32 +301,35 @@ class ExchangeService:
             raise HTTPException(status_code=403, detail="Not your exchange")
         exchange.status = new_status
         await self.exchange_repo.update(exchange)
-        
+
         # Emit exchange status update event
         event_type = None
         if new_status == ExchangeStatus.accepted:
             event_type = EventType.EXCHANGE_ACCEPTED
         elif new_status == ExchangeStatus.completed:
             event_type = EventType.EXCHANGE_COMPLETED
-        
+
         if event_type:
-            await event_manager.notify(Event(
-                event_type,
-                {
-                    'exchange_id': exchange.id,
-                    'requester_id': exchange.requester_id,
-                    'owner_id': exchange.owner_id,
-                    'old_status': exchange.status.value,
-                    'new_status': new_status.value,
-                    'updated_by_user_id': user_id
-                }
-            ))
-        
+            await event_manager.notify(
+                Event(
+                    event_type,
+                    {
+                        "exchange_id": exchange.id,
+                        "requester_id": exchange.requester_id,
+                        "owner_id": exchange.owner_id,
+                        "old_status": exchange.status.value,
+                        "new_status": new_status.value,
+                        "updated_by_user_id": user_id,
+                    },
+                )
+            )
+
         # Load relationships for response schema
         return await self.exchange_repo.get_with_details(exchange_id)
 
 
 # ─── Wishlist Service ─────────────────────────────────────────────────────────
+
 
 class WishlistService:
     def __init__(self, db: AsyncSession):
@@ -302,32 +356,41 @@ class WishlistService:
 
 # ─── Chat Service ─────────────────────────────────────────────────────────────
 
+
 class ChatService:
     def __init__(self, db: AsyncSession):
         self.message_repo = MessageRepository(db)
         self.exchange_repo = ExchangeRepository(db)
 
-    async def send_message(self, exchange_id: int, sender_id: int, data: MessageCreate) -> Message:
+    async def send_message(
+        self, exchange_id: int, sender_id: int, data: MessageCreate
+    ) -> Message:
         exchange = await self.exchange_repo.get(exchange_id)
         if not exchange:
             raise HTTPException(status_code=404, detail="Exchange not found")
         if sender_id not in (exchange.requester_id, exchange.owner_id):
-            raise HTTPException(status_code=403, detail="Not participant of this exchange")
-        msg = Message(exchange_id=exchange_id, sender_id=sender_id, content=data.content)
+            raise HTTPException(
+                status_code=403, detail="Not participant of this exchange"
+            )
+        msg = Message(
+            exchange_id=exchange_id, sender_id=sender_id, content=data.content
+        )
         created_message = await self.message_repo.create(msg)
-        
+
         # Emit message sent event
-        await event_manager.notify(Event(
-            EventType.MESSAGE_SENT,
-            {
-                'message_id': created_message.id,
-                'exchange_id': exchange_id,
-                'sender_id': sender_id,
-                'content': data.content,
-                'created_at': created_message.created_at.isoformat()
-            }
-        ))
-        
+        await event_manager.notify(
+            Event(
+                EventType.MESSAGE_SENT,
+                {
+                    "message_id": created_message.id,
+                    "exchange_id": exchange_id,
+                    "sender_id": sender_id,
+                    "content": data.content,
+                    "created_at": created_message.created_at.isoformat(),
+                },
+            )
+        )
+
         return created_message
 
     async def get_messages(self, exchange_id: int, user_id: int):
@@ -341,6 +404,7 @@ class ChatService:
 
 # ─── Friendship Service ─────────────────────────────────────────────────────────
 
+
 class FriendshipService:
     def __init__(self, db: AsyncSession):
         self.friendship_repo = FriendshipRepository(db)
@@ -348,7 +412,9 @@ class FriendshipService:
     async def add_friend(self, requester_id: int, addressee_id: int) -> dict:
         existing = await self.friendship_repo.get_friendship(requester_id, addressee_id)
         if existing:
-            raise HTTPException(status_code=400, detail="Already friends or request pending")
+            raise HTTPException(
+                status_code=400, detail="Already friends or request pending"
+            )
 
         if requester_id == addressee_id:
             raise HTTPException(status_code=400, detail="Cannot add yourself as friend")
@@ -364,11 +430,11 @@ class FriendshipService:
             Event(
                 EventType.FRIEND_ADDED,
                 {
-                    'friendship_id': created_friendship.id,
-                    'requester_id': requester_id,
-                    'addressee_id': addressee_id,
-                    'status': created_friendship.status,
-                    'created_at': created_friendship.created_at.isoformat(),
+                    "friendship_id": created_friendship.id,
+                    "requester_id": requester_id,
+                    "addressee_id": addressee_id,
+                    "status": created_friendship.status,
+                    "created_at": created_friendship.created_at.isoformat(),
                 },
             )
         )

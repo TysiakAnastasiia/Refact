@@ -19,9 +19,7 @@ class BaseRepository(Generic[ModelType]):
         return result.scalar_one_or_none()
 
     async def get_all(self, skip: int = 0, limit: int = 20) -> Sequence[ModelType]:
-        result = await self.db.execute(
-            select(self.model).offset(skip).limit(limit)
-        )
+        result = await self.db.execute(select(self.model).offset(skip).limit(limit))
         return result.scalars().all()
 
     async def count(self) -> int:

@@ -2,19 +2,33 @@
 Seed script — populates the DB with sample data for development.
 Run: python -m app.db.seed
 """
+
 import asyncio
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import AsyncSessionLocal, engine, Base
 from app.core.security import get_password_hash
 from app.models import User, Book, Review, BookGenre, BookCondition
-import app.models 
 
 
 SAMPLE_USERS = [
-    {"email": "alice@bookswap.ua", "username": "alice_reads", "full_name": "Аліса Книжкова", "city": "Київ"},
-    {"email": "bob@bookswap.ua",   "username": "bob_pages",   "full_name": "Боб Читальний",  "city": "Львів"},
-    {"email": "carol@bookswap.ua", "username": "carol_lit",   "full_name": "Кароль Лісова",  "city": "Одеса"},
+    {
+        "email": "alice@bookswap.ua",
+        "username": "alice_reads",
+        "full_name": "Аліса Книжкова",
+        "city": "Київ",
+    },
+    {
+        "email": "bob@bookswap.ua",
+        "username": "bob_pages",
+        "full_name": "Боб Читальний",
+        "city": "Львів",
+    },
+    {
+        "email": "carol@bookswap.ua",
+        "username": "carol_lit",
+        "full_name": "Кароль Лісова",
+        "city": "Одеса",
+    },
 ]
 
 SAMPLE_BOOKS = [
@@ -101,12 +115,42 @@ SAMPLE_BOOKS = [
 ]
 
 SAMPLE_REVIEWS = [
-    {"book_idx": 0, "user_idx": 1, "rating": 5, "content": "Геніальний твір! Читав на одному диханні, не міг відірватися."},
-    {"book_idx": 0, "user_idx": 2, "rating": 4, "content": "Чудова книга, але потребує уважного читання. Дуже багато смислових шарів."},
-    {"book_idx": 1, "user_idx": 0, "rating": 5, "content": "Магічний світ, неймовірна фантазія автора. Рекомендую всім!"},
-    {"book_idx": 2, "user_idx": 1, "rating": 5, "content": "Актуально навіть сьогодні. Моторошно, наскільки точно передбачено."},
-    {"book_idx": 3, "user_idx": 2, "rating": 4, "content": "Складна але захоплива книга. Потрібна терпіння на початку."},
-    {"book_idx": 6, "user_idx": 0, "rating": 5, "content": "Змінила моє розуміння людської цивілізації. Обов'язкова до прочитання."},
+    {
+        "book_idx": 0,
+        "user_idx": 1,
+        "rating": 5,
+        "content": "Геніальний твір! Читав на одному диханні, не міг відірватися.",
+    },
+    {
+        "book_idx": 0,
+        "user_idx": 2,
+        "rating": 4,
+        "content": "Чудова книга, але потребує уважного читання. Дуже багато смислових шарів.",
+    },
+    {
+        "book_idx": 1,
+        "user_idx": 0,
+        "rating": 5,
+        "content": "Магічний світ, неймовірна фантазія автора. Рекомендую всім!",
+    },
+    {
+        "book_idx": 2,
+        "user_idx": 1,
+        "rating": 5,
+        "content": "Актуально навіть сьогодні. Моторошно, наскільки точно передбачено.",
+    },
+    {
+        "book_idx": 3,
+        "user_idx": 2,
+        "rating": 4,
+        "content": "Складна але захоплива книга. Потрібна терпіння на початку.",
+    },
+    {
+        "book_idx": 6,
+        "user_idx": 0,
+        "rating": 5,
+        "content": "Змінила моє розуміння людської цивілізації. Обов'язкова до прочитання.",
+    },
 ]
 
 
@@ -117,6 +161,7 @@ async def seed():
     async with AsyncSessionLocal() as session:
         # Check if already seeded
         from sqlalchemy import select
+
         result = await session.execute(select(User).limit(1))
         if result.scalar_one_or_none():
             print("⚠️  Database already seeded, skipping.")
@@ -153,7 +198,9 @@ async def seed():
             session.add(review)
 
         await session.commit()
-        print(f"Seeded {len(users)} users, {len(books)} books, {len(SAMPLE_REVIEWS)} reviews.")
+        print(
+            f"Seeded {len(users)} users, {len(books)} books, {len(SAMPLE_REVIEWS)} reviews."
+        )
         print(" Login: alice@bookswap.ua / password123")
 
 

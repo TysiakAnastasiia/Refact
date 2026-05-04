@@ -2,18 +2,26 @@ import json
 from contextlib import asynccontextmanager
 from typing import Optional
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, Query
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.security import decode_token
 from app.api.routes import (
-    auth_router, users_router, books_router, reviews_router,
-    exchanges_router, wishlist_router, chat_router, recs_router, friends_router,
+    auth_router,
+    users_router,
+    books_router,
+    reviews_router,
+    exchanges_router,
+    wishlist_router,
+    chat_router,
+    recs_router,
+    friends_router,
 )
 
 
-#  WebSocket Connection Manager 
+#  WebSocket Connection Manager
+
 
 class ConnectionManager:
     """Manages active WebSocket connections per exchange room."""
@@ -29,7 +37,9 @@ class ConnectionManager:
         if exchange_id in self.active:
             self.active[exchange_id].discard(websocket)
 
-    async def broadcast(self, exchange_id: int, message: dict, exclude: Optional[WebSocket] = None):
+    async def broadcast(
+        self, exchange_id: int, message: dict, exclude: Optional[WebSocket] = None
+    ):
         for ws in list(self.active.get(exchange_id, [])):
             if ws != exclude:
                 try:
@@ -41,13 +51,15 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
-#  App factory 
+#  App factory
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: create tables (use alembic in production)
     from app.db.session import engine, Base
     import app.models  # noqa: F401 — register models
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
@@ -66,10 +78,10 @@ app = FastAPI(
 # Тимчасово дозволяємо всі origins для вирішення проблеми
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],              # Дозволяє запити з будь-яких адрес
+    allow_origins=["*"],  # Дозволяє запити з будь-яких адрес
     allow_credentials=True,
-    allow_methods=["*"],              # Дозволяє всі методи (GET, POST, PUT, DELETE тощо)
-    allow_headers=["*"],              # Дозволяє всі заголовки
+    allow_methods=["*"],  # Дозволяє всі методи (GET, POST, PUT, DELETE тощо)
+    allow_headers=["*"],  # Дозволяє всі заголовки
 )
 
 # Routers
@@ -84,7 +96,8 @@ app.include_router(recs_router, prefix="/api")
 app.include_router(friends_router, prefix="/api")
 
 
-#  WebSocket endpoint 
+#  WebSocket endpoint
+
 
 @app.websocket("/ws/chat/{exchange_id}")
 async def websocket_chat(

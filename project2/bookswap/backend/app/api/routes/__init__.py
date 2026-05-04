@@ -1,25 +1,44 @@
 """
 API Routes — thin controllers that delegate to service layer.
 """
+
 from typing import Optional
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.core.dependencies import get_current_user
 from app.models import User, BookGenre, ExchangeStatus
 from app.services import (
-    AuthService, UserService, BookService, ReviewService,
-    ExchangeService, WishlistService, ChatService, FriendshipService,
+    AuthService,
+    UserService,
+    BookService,
+    ReviewService,
+    ExchangeService,
+    WishlistService,
+    ChatService,
+    FriendshipService,
 )
 from app.services.recommendations import RecommendationService
 from app.schemas import (
-    UserRegister, UserLogin, TokenResponse, UserBase, UserUpdate, UserPublic,
-    BookCreate, BookUpdate, BookResponse, BookListResponse,
-    ReviewCreate, ReviewUpdate, ReviewResponse,
-    ExchangeCreate, ExchangeResponse,
+    UserRegister,
+    UserLogin,
+    TokenResponse,
+    UserBase,
+    UserUpdate,
+    UserPublic,
+    BookCreate,
+    BookUpdate,
+    BookResponse,
+    BookListResponse,
+    ReviewCreate,
+    ReviewUpdate,
+    ReviewResponse,
+    ExchangeCreate,
+    ExchangeResponse,
     WishlistItemResponse,
-    MessageCreate, MessageResponse,
+    MessageCreate,
+    MessageResponse,
     RecommendationResponse,
 )
 from app.repositories import ReviewRepository
@@ -27,7 +46,7 @@ from app.repositories import ReviewRepository
 router = APIRouter()
 
 
-#  Auth 
+#  Auth
 
 auth_router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -42,7 +61,7 @@ async def login(data: UserLogin, db: AsyncSession = Depends(get_db)):
     return await AuthService(db).login(data.email, data.password)
 
 
-#  Users 
+#  Users
 
 users_router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -67,6 +86,7 @@ async def search_users(
     db: AsyncSession = Depends(get_db),
 ):
     from sqlalchemy import or_, select
+
     result = await db.execute(
         select(User)
         .where(
@@ -92,7 +112,7 @@ async def get_user_reviews(user_id: int, db: AsyncSession = Depends(get_db)):
     return await ReviewRepository(db).get_by_user(user_id)
 
 
-#  Books 
+#  Books
 
 books_router = APIRouter(prefix="/books", tags=["Books"])
 
@@ -108,9 +128,17 @@ async def list_books(
     db: AsyncSession = Depends(get_db),
 ):
     service = BookService(db)
-    books, total = await service.search_books(q, genre, available_only, owner_id, page, page_size)
+    books, total = await service.search_books(
+        q, genre, available_only, owner_id, page, page_size
+    )
     pages = (total + page_size - 1) // page_size
-    return {"items": books, "total": total, "page": page, "page_size": page_size, "pages": pages}
+    return {
+        "items": books,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "pages": pages,
+    }
 
 
 @books_router.get("/{book_id}", response_model=BookResponse)
@@ -160,7 +188,7 @@ async def get_book_reviews(
     return await ReviewService(db).get_book_reviews(book_id, skip, limit)
 
 
-#  Reviews 
+#  Reviews
 
 reviews_router = APIRouter(prefix="/reviews", tags=["Reviews"])
 
@@ -193,7 +221,7 @@ async def delete_review(
     await ReviewService(db).delete_review(review_id, current_user.id)
 
 
-#  Exchanges 
+#  Exchanges
 
 exchanges_router = APIRouter(prefix="/exchanges", tags=["Exchanges"])
 
@@ -205,6 +233,7 @@ async def list_exchanges(
     db: AsyncSession = Depends(get_db),
 ):
     from app.repositories import ExchangeRepository
+
     return await ExchangeRepository(db).get_all_with_details(skip, limit)
 
 
@@ -214,6 +243,7 @@ async def my_exchanges(
     db: AsyncSession = Depends(get_db),
 ):
     from app.repositories import ExchangeRepository
+
     return await ExchangeRepository(db).get_for_user(current_user.id)
 
 
@@ -224,6 +254,7 @@ async def exchanges_between_users(
     db: AsyncSession = Depends(get_db),
 ):
     from app.repositories import ExchangeRepository
+
     return await ExchangeRepository(db).get_between_users(user1, user2)
 
 
@@ -242,7 +273,9 @@ async def accept_exchange(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await ExchangeService(db).update_status(exchange_id, ExchangeStatus.accepted, current_user.id)
+    return await ExchangeService(db).update_status(
+        exchange_id, ExchangeStatus.accepted, current_user.id
+    )
 
 
 @exchanges_router.patch("/{exchange_id}/reject", response_model=ExchangeResponse)
@@ -251,7 +284,9 @@ async def reject_exchange(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await ExchangeService(db).update_status(exchange_id, ExchangeStatus.rejected, current_user.id)
+    return await ExchangeService(db).update_status(
+        exchange_id, ExchangeStatus.rejected, current_user.id
+    )
 
 
 @exchanges_router.patch("/{exchange_id}/complete", response_model=ExchangeResponse)
@@ -260,10 +295,12 @@ async def complete_exchange(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await ExchangeService(db).update_status(exchange_id, ExchangeStatus.completed, current_user.id)
+    return await ExchangeService(db).update_status(
+        exchange_id, ExchangeStatus.completed, current_user.id
+    )
 
 
-#  Wishlist 
+#  Wishlist
 
 wishlist_router = APIRouter(prefix="/wishlist", tags=["Wishlist"])
 
@@ -276,7 +313,9 @@ async def get_wishlist(
     return await WishlistService(db).get_wishlist(current_user.id)
 
 
-@wishlist_router.post("/{book_id}", response_model=WishlistItemResponse, status_code=201)
+@wishlist_router.post(
+    "/{book_id}", response_model=WishlistItemResponse, status_code=201
+)
 async def add_to_wishlist(
     book_id: int,
     current_user: User = Depends(get_current_user),
@@ -294,7 +333,7 @@ async def remove_from_wishlist(
     await WishlistService(db).remove_from_wishlist(current_user.id, book_id)
 
 
-#  Chat 
+#  Chat
 
 chat_router = APIRouter(prefix="/chat", tags=["Chat"])
 
@@ -308,7 +347,7 @@ async def get_messages(
     return await ChatService(db).get_messages(exchange_id, current_user.id)
 
 
-#  Friends 
+#  Friends
 
 friends_router = APIRouter(prefix="/friends", tags=["Friends"])
 
@@ -356,7 +395,9 @@ async def get_recommendations(
     # Get user's reviewed books as context
     review_repo = ReviewRepository(db)
     user_reviews = await review_repo.get_by_user(current_user.id)
-    read_books = [f"{r.book.title} ({r.book.author})" for r in user_reviews[:10] if r.book]
+    read_books = [
+        f"{r.book.title} ({r.book.author})" for r in user_reviews[:10] if r.book
+    ]
 
     service = RecommendationService()
     return await service.get_recommendations(genre_list, read_books)

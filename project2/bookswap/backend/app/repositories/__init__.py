@@ -3,9 +3,18 @@ from sqlalchemy import select, and_
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import User, Review, Exchange, WishlistItem, Message, ExchangeStatus, Book, Friendship
+from app.models import (
+    User,
+    Review,
+    Exchange,
+    WishlistItem,
+    Message,
+    ExchangeStatus,
+    Book,
+    Friendship,
+)
 from app.repositories.base import BaseRepository
-from app.repositories.book import BookRepository
+from app.repositories.book import BookRepository as BookRepository
 
 
 class UserRepository(BaseRepository[User]):
@@ -25,7 +34,9 @@ class ReviewRepository(BaseRepository[Review]):
     def __init__(self, db: AsyncSession):
         super().__init__(Review, db)
 
-    async def get_by_book(self, book_id: int, skip: int = 0, limit: int = 20) -> Sequence[Review]:
+    async def get_by_book(
+        self, book_id: int, skip: int = 0, limit: int = 20
+    ) -> Sequence[Review]:
         result = await self.db.execute(
             select(Review)
             .options(selectinload(Review.user))
@@ -45,7 +56,9 @@ class ReviewRepository(BaseRepository[Review]):
         )
         return result.scalars().all()
 
-    async def get_user_review_for_book(self, user_id: int, book_id: int) -> Optional[Review]:
+    async def get_user_review_for_book(
+        self, user_id: int, book_id: int
+    ) -> Optional[Review]:
         result = await self.db.execute(
             select(Review).where(
                 and_(Review.user_id == user_id, Review.book_id == book_id)
@@ -80,14 +93,14 @@ class ExchangeRepository(BaseRepository[Exchange]):
                 selectinload(Exchange.offered_book).selectinload(Book.owner),
                 selectinload(Exchange.requested_book).selectinload(Book.owner),
             )
-            .where(
-                (Exchange.requester_id == user_id) | (Exchange.owner_id == user_id)
-            )
+            .where((Exchange.requester_id == user_id) | (Exchange.owner_id == user_id))
             .order_by(Exchange.created_at.desc())
         )
         return result.scalars().all()
 
-    async def get_all_with_details(self, skip: int = 0, limit: int = 20) -> Sequence[Exchange]:
+    async def get_all_with_details(
+        self, skip: int = 0, limit: int = 20
+    ) -> Sequence[Exchange]:
         result = await self.db.execute(
             select(Exchange)
             .options(
@@ -103,7 +116,9 @@ class ExchangeRepository(BaseRepository[Exchange]):
         )
         return result.scalars().all()
 
-    async def get_between_users(self, user1_id: int, user2_id: int) -> Sequence[Exchange]:
+    async def get_between_users(
+        self, user1_id: int, user2_id: int
+    ) -> Sequence[Exchange]:
         result = await self.db.execute(
             select(Exchange)
             .options(
@@ -113,8 +128,8 @@ class ExchangeRepository(BaseRepository[Exchange]):
                 selectinload(Exchange.requested_book).selectinload(Book.owner),
             )
             .where(
-                (Exchange.requester_id == user1_id) & (Exchange.owner_id == user2_id) |
-                (Exchange.requester_id == user2_id) & (Exchange.owner_id == user1_id)
+                (Exchange.requester_id == user1_id) & (Exchange.owner_id == user2_id)
+                | (Exchange.requester_id == user2_id) & (Exchange.owner_id == user1_id)
             )
             .order_by(Exchange.created_at.desc())
         )
@@ -128,9 +143,7 @@ class WishlistRepository(BaseRepository[WishlistItem]):
     async def get_user_wishlist(self, user_id: int) -> Sequence[WishlistItem]:
         result = await self.db.execute(
             select(WishlistItem)
-            .options(
-                selectinload(WishlistItem.book).selectinload(Book.owner)
-            )
+            .options(selectinload(WishlistItem.book).selectinload(Book.owner))
             .where(WishlistItem.user_id == user_id)
             .order_by(WishlistItem.added_at.desc())
         )
@@ -163,28 +176,42 @@ class FriendshipRepository(BaseRepository[Friendship]):
     def __init__(self, db: AsyncSession):
         super().__init__(Friendship, db)
 
-    async def get_friendship(self, user1_id: int, user2_id: int) -> Optional[Friendship]:
+    async def get_friendship(
+        self, user1_id: int, user2_id: int
+    ) -> Optional[Friendship]:
         result = await self.db.execute(
             select(Friendship).where(
-                (Friendship.requester_id == user1_id) & (Friendship.addressee_id == user2_id) |
-                (Friendship.requester_id == user2_id) & (Friendship.addressee_id == user1_id)
+                (Friendship.requester_id == user1_id)
+                & (Friendship.addressee_id == user2_id)
+                | (Friendship.requester_id == user2_id)
+                & (Friendship.addressee_id == user1_id)
             )
         )
         return result.scalar_one_or_none()
 
-    async def create_friendship(self, requester_id: int, addressee_id: int) -> Friendship:
-        friendship = Friendship(requester_id=requester_id, addressee_id=addressee_id, status="accepted")
+    async def create_friendship(
+        self, requester_id: int, addressee_id: int
+    ) -> Friendship:
+        friendship = Friendship(
+            requester_id=requester_id, addressee_id=addressee_id, status="accepted"
+        )
         return await self.create(friendship)
 
     async def get_user_friends(self, user_id: int) -> Sequence[User]:
         result = await self.db.execute(
             select(User)
-            .join(Friendship, (
-                (Friendship.requester_id == user_id) & (Friendship.status == "accepted") |
-                (Friendship.addressee_id == user_id) & (Friendship.status == "accepted")
-            ))
+            .join(
+                Friendship,
+                (
+                    (Friendship.requester_id == user_id)
+                    & (Friendship.status == "accepted")
+                    | (Friendship.addressee_id == user_id)
+                    & (Friendship.status == "accepted")
+                ),
+            )
             .where(
-                (User.id == Friendship.addressee_id) | (User.id == Friendship.requester_id)
+                (User.id == Friendship.addressee_id)
+                | (User.id == Friendship.requester_id)
             )
             .where(User.id != user_id)
         )
