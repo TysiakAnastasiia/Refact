@@ -31,6 +31,4 @@ postgres_data/
 .DS_Store
 Thumbs.db
 
-
-contributing.md
-README.md
+ruff.toml
