@@ -9,7 +9,6 @@
 ```mermaid
 flowchart TD
     Reader([Читач])
-    Admin([Адмін])
 
     Reader --> UC1[Реєстрація / Вхід]
     Reader --> UC2[Перегляд каталогу]
@@ -25,9 +24,6 @@ flowchart TD
     Reader --> UC12[AI-рекомендації]
     Reader --> UC13[Переглянути профіль]
     Reader --> UC14[Редагувати профіль]
-
-    Admin --> UC15[Модерація контенту]
-    Admin --> UC2
 
     UC9 -->|requires| UC1
     UC6 -->|requires| UC1

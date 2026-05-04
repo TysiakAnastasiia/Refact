@@ -873,7 +873,7 @@ Authorization: Bearer <access_token>
 | Метод   | Ендпоінт                       | Опис                     | Auth |
 | ------- | ------------------------------ | ------------------------ | ---- |
 | `POST`  | `/api/exchanges`               | Запропонувати обмін      |
-| `GET`   | `/api/exchanges`               | Всі обміни (адмін)       |
+| `GET`   | `/api/exchanges`               | Всі обміни               |
 | `GET`   | `/api/exchanges/my`            | Мої обміни               |
 | `GET`   | `/api/exchanges/between`       | Обміни між двома юзерами |
 | `GET`   | `/api/exchanges/{id}`          | Деталі обміну            |
