@@ -1067,14 +1067,14 @@ cp frontend/.env.example frontend/.env
 ### 3. Запуск
 
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 
 ### 4. Міграції (перший запуск)
 
 ```bash
-docker-compose exec backend alembic upgrade head
-docker-compose exec backend python -m app.db.seed  # опціонально: тестові дані
+docker compose exec backend alembic upgrade head
+docker compose exec backend python -m app.db.seed  # опціонально: тестові дані
 ```
 
 ### 5. Відкрийте у браузері
