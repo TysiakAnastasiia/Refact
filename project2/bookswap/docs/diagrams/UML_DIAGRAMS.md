@@ -1,4 +1,4 @@
-# 📐 UML Діаграми — BookSwap
+# UML Діаграми — BookSwap
 
 Скопіюйте код у [mermaid.live](https://mermaid.live) для перегляду.
 
@@ -8,8 +8,8 @@
 
 ```mermaid
 flowchart TD
-    Reader([👤 Читач])
-    Admin([🛠️ Адмін])
+    Reader([Читач])
+    Admin([Адмін])
 
     Reader --> UC1[Реєстрація / Вхід]
     Reader --> UC2[Перегляд каталогу]
@@ -297,21 +297,21 @@ sequenceDiagram
 
 ```mermaid
 graph TB
-    subgraph Frontend["⚛️ React Frontend (Vite)"]
+    subgraph Frontend["React Frontend (Vite)"]
         Pages["Pages\n(HomePage, CatalogPage...)"]
         Components["Components\n(BookCard, ChatWindow...)"]
         Stores["Zustand Store\n(authStore)"]
         AxiosClient["API Client\n(Axios + React Query)"]
     end
 
-    subgraph Backend["🐍 FastAPI Backend"]
+    subgraph Backend["FastAPI Backend"]
         Routes["API Routes\n(auth, books, exchanges...)"]
         Services["Services\n(BookService, AuthService...)"]
         Repositories["Repositories\n(BookRepository, UserRepository...)"]
         Models["SQLAlchemy Models\n(User, Book, Exchange...)"]
     end
 
-    subgraph External["🌐 External"]
+    subgraph External["External"]
         DB[(PostgreSQL)]
         Claude[Anthropic\nClaude API]
     end
