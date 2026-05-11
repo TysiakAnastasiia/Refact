@@ -2,6 +2,7 @@
 
 REST API для відстеження щоденних звичок з підрахунком стріків. Побудовано на **FastAPI + PostgreSQL**.
 
+[![CI/CD](https://github.com/TysiakAnastasiia/Refact/actions/workflows/ci.yml/badge.svg)](https://github.com/TysiakAnastasiia/Refact/actions/workflows/ci.yml)
 ---
 
 ## Запуск через Docker
